@@ -2609,9 +2609,10 @@ function enterSystem(){document.getElementById("authGate").style.display="none";
   const app=document.getElementById("appRoot");app.style.display="flex";
   const a=getAuth();const uv=document.getElementById("userVal");if(uv&&a)uv.textContent=a.user;
   if(uv)uv.onclick=openProfile;if(uv)uv.style.cursor="pointer";
-  /* 检查管理员状态 */
-  checkCurrentUserAdmin().then(admin=>{window.__isAdmin=admin;buildNav();if(admin)console.log("👑 管理员模式");});
-  if(!__appInited){__appInited=true;initApp();}}
+  /* 先检查管理员状态，再初始化（确保导航栏正确渲染） */
+  if(!__appInited){__appInited=true;
+    checkCurrentUserAdmin().then(admin=>{window.__isAdmin=admin;initApp();if(admin)console.log("👑 管理员模式");});
+  }else{buildNav();}}
 function showGate(){document.getElementById("appRoot").style.display="none";
   document.getElementById("authGate").style.display="flex";renderAuthForm();}
 function doLogout(){localStorage.removeItem(SESSION_KEY);showGate();}
