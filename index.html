@@ -2570,7 +2570,7 @@ function renderAuthForm(){
     ${registerMode?`
       <div class="auth-title">创建学习账号</div>
       <div class="auth-sub">账号密码仅保存在本机浏览器，用于进入代练系统</div>
-      <div class="auth-field"><label>账号</label><input class="auth-input" id="regUser" maxlength="20" placeholder="2-20 位，建议用你的常用名"></div>
+      <div class="auth-field"><label>账号</label><input class="auth-input" id="regUser" maxlength="8" placeholder="2-8 位，建议用你的常用名"></div>
       <div class="auth-field"><label>密码</label><input class="auth-input" id="regPass" type="password" maxlength="32" placeholder="至少 4 位"></div>
       <div class="auth-field"><label>确认密码</label><input class="auth-input" id="regPass2" type="password" maxlength="32" placeholder="再输入一次"></div>
       <button class="auth-btn" id="authBtn">创建并进入系统</button>
@@ -2596,11 +2596,21 @@ function renderAuthForm(){
     const submit=()=>{const u=document.getElementById("regUser").value.trim();
       const p=document.getElementById("regPass").value,p2=document.getElementById("regPass2").value;
       if(u.length<2)return authErr("账号至少 2 位。");
+      if(u.length>8)return authErr("账号最多 8 位。");
       if(p.length<4)return authErr("密码至少 4 位。");
       if(p!==p2)return authErr("两次输入的密码不一致。");
-      localStorage.setItem(AUTH_KEY,JSON.stringify({user:u,hash:hashPwd(u,p)}));
-      setSession(u);enterSystem();
-      supabaseRegister(u,hashPwd(u,p)).then(r=>{if(r&&r.is_admin)toast("👑 你是系统首位管理员");});};
+      /* 检查是否重名 */
+      fetch(SUPABASE_URL+"/rest/v1/users?username=eq."+encodeURIComponent(u)+"&select=username",{headers:getSupabaseHeaders()})
+      .then(r=>r.json()).then(rows=>{
+        if(rows&&rows.length>0)return authErr("该用户名已被注册，请换一个。");
+        localStorage.setItem(AUTH_KEY,JSON.stringify({user:u,hash:hashPwd(u,p)}));
+        setSession(u);enterSystem();
+        supabaseRegister(u,hashPwd(u,p)).then(r=>{if(r&&r.is_admin)toast("👑 你是系统首位管理员");});
+      }).catch(()=>{
+        /* 网络错误时允许本地注册 */
+        localStorage.setItem(AUTH_KEY,JSON.stringify({user:u,hash:hashPwd(u,p)}));
+        setSession(u);enterSystem();
+      });};
     document.getElementById("authBtn").onclick=submit;
     ["regUser","regPass","regPass2"].forEach(id=>document.getElementById(id).addEventListener("keydown",e=>{if(e.key==="Enter")submit();}));
   }
@@ -2960,7 +2970,7 @@ function renderAdmin(el){
   document.getElementById("adminAddUserBtn").onclick=()=>{
     document.getElementById("modalBox").innerHTML=`<button class="x" onclick="closeModal()">✕</button>
     <h3 style="margin-bottom:4px">➕ 新增用户</h3><div class="sub" style="margin-bottom:12px">创建新账号，用户可用此账号登录系统</div>
-    <div class="profile-field"><label>用户名</label><input class="auth-input" id="auUser" maxlength="20" placeholder="2-20 位"></div>
+    <div class="profile-field"><label>用户名</label><input class="auth-input" id="auUser" maxlength="8" placeholder="2-8 位，不可重名"></div>
     <div class="profile-field"><label>密码</label><input class="auth-input" id="auPass" type="password" maxlength="32" placeholder="至少 4 位"></div>
     <div class="profile-field"><label>确认密码</label><input class="auth-input" id="auPass2" type="password" maxlength="32" placeholder="再输入一次"></div>
     <div class="profile-field"><label><input type="checkbox" id="auAdmin"> 设为管理员</label></div>
