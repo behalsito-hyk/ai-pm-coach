@@ -323,7 +323,10 @@ input,textarea,select{font-family:inherit}
       <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
       <div class="level-note" id="levelNote"></div>
       <button class="checkin-btn" id="checkinBtn">🎁 每日签到 · 领 100 积分</button>
-      <button class="reset-btn" id="resetBtn">清空进度重新开始</button>
+      <div style="display:flex;gap:4px;margin-top:6px">
+        <button class="reset-btn" id="syncBtn" style="flex:1;border-color:var(--indigo);color:var(--indigo2)">☁️ 同步</button>
+        <button class="reset-btn" id="resetBtn" style="flex:1">清空进度</button>
+      </div>
     </div>
   </aside>
 
@@ -2399,14 +2402,78 @@ function loadPacksSequentially(list,done){let i=0;(function next(){if(i>=list.le
   const s=document.createElement("script");s.src="packs/"+list[i++];
 s.onload=next;s.onerror=next;document.head.appendChild(s);})();}
 
+/* ---------- Supabase 云同步 ---------- */
+const SUPABASE_URL = "https://xebuobugcakbgqdauspp.supabase.co";
+const SUPABASE_KEY = "sb_publishable_IYEw_-Tz4dWsyDc42ChXfA_UafLp809";
+const SUPABASE_TABLE = "user_data";
+function getSupabaseHeaders(){
+  return {"Content-Type":"application/json","apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY};}
+async function syncToSupabase(){
+  const a=getAuth();if(!a)return toast("⚠️ 请先登录");
+  const data={};
+  const keys=["aipm_v1","aipm_llm_logs","aipm_llm_usage","aipm_llm_keys","aipm_llm_active","aipm_custom_kb","aipm_chat_index"];
+  keys.forEach(k=>{const v=localStorage.getItem(k);if(v)try{data[k]=JSON.parse(v);}catch{data[k]=v;}});
+  try{const idx=getSessionIndex();data.chat_sessions=[];
+    for(const s of idx){const msgs=loadSessionMessages(s.id);if(msgs.length)data.chat_sessions.push({id:s.id,title:s.title,msgs});}
+  }catch(e){}
+  const payload={username:a.user,data:data};
+  try{
+    const resp=await fetch(SUPABASE_URL+"/rest/v1/"+SUPABASE_TABLE+"?username=eq."+encodeURIComponent(a.user),{
+      method:"GET",headers:getSupabaseHeaders()});
+    const existing=await resp.json();
+    if(existing&&existing.length>0){
+      await fetch(SUPABASE_URL+"/rest/v1/"+SUPABASE_TABLE+"?username=eq."+encodeURIComponent(a.user),{
+        method:"PATCH",headers:getSupabaseHeaders(),body:JSON.stringify(payload)});
+    }else{
+      await fetch(SUPABASE_URL+"/rest/v1/"+SUPABASE_TABLE,{
+        method:"POST",headers:getSupabaseHeaders(),body:JSON.stringify(payload)});
+    }
+    toast("☁️ 已同步到云端");
+  }catch(e){toast("⚠️ 同步失败："+(e.message||"未知错误"));}
+}
+async function syncFromSupabase(){
+  const a=getAuth();if(!a)return toast("⚠️ 请先登录");
+  try{
+    const resp=await fetch(SUPABASE_URL+"/rest/v1/"+SUPABASE_TABLE+"?username=eq."+encodeURIComponent(a.user),{
+      method:"GET",headers:getSupabaseHeaders()});
+    const rows=await resp.json();
+    if(!rows||!rows.length)return toast("☁️ 云端暂无数据，请先上传");
+    const supadata=rows[0].data;
+    if(!supadata)return toast("⚠️ 云端数据格式异常");
+    const restoreKeys=["aipm_v1","aipm_llm_logs","aipm_llm_usage","aipm_llm_keys","aipm_llm_active","aipm_custom_kb","aipm_chat_index"];
+    restoreKeys.forEach(k=>{if(supadata[k])localStorage.setItem(k,JSON.stringify(supadata[k]));});
+    if(supadata.chat_sessions&&Array.isArray(supadata.chat_sessions)){
+      supadata.chat_sessions.forEach(s=>{if(s.id&&s.msgs)localStorage.setItem("aipm_chat_"+s.id,JSON.stringify(s.msgs));});
+    }
+    S=loadState();
+    toast("☁️ 已从云端恢复！刷新页面生效");
+    setTimeout(()=>location.reload(),1500);
+  }catch(e){toast("⚠️ 恢复失败："+(e.message||"未知错误"));}
+}
+
 function initApp(){touchStreak();buildNav();go("chat");renderLevel();renderStreak();renderCheckinBtn();
-/* 清理空会话（没有消息的） */
 const idx=getSessionIndex();const valid=idx.filter(s=>{const msgs=loadSessionMessages(s.id);return msgs.length>1;});
 if(valid.length!==idx.length){saveSessionIndex(valid);idx.forEach(s=>{if(!valid.find(v=>v.id===s.id))localStorage.removeItem("aipm_chat_"+s.id);});}
 const pv=document.getElementById("packDateVal");
 if(pv){const d=latestPackDate();pv.textContent=d?("更新至 "+d):"内置";}
 document.getElementById("logoutBtn").onclick=doLogout;
 document.getElementById("checkinBtn").onclick=doCheckin;
+document.getElementById("syncBtn").onclick=()=>{
+  const a=getAuth();if(!a)return toast("⚠️ 请先登录");
+  document.getElementById("modalBox").innerHTML=`<button class="x" onclick="closeModal()">✕</button>
+  <h3 style="margin-bottom:8px">☁️ 云同步</h3>
+  <div class="sub">数据通过 Supabase 加密传输，账号与本地登录一致。</div>
+  <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:16px;margin:10px 0;font-size:13px;line-height:1.7;color:#b0e6d5">
+  <b>📤 上传到云端</b>：将本地数据同步到服务器<br>
+  <b>📥 从云端恢复</b>：从服务器下载数据覆盖本地（刷新后生效）</div>
+  <div class="modal-actions">
+  <button class="btn btn-primary" id="syncUploadBtn">📤 上传到云端</button>
+  <button class="btn btn-ghost" id="syncDownloadBtn" style="border-color:var(--amber);color:var(--amber)">📥 从云端恢复</button>
+  <button class="btn btn-ghost" onclick="closeModal()">取消</button></div>`;
+  document.getElementById("modal").classList.add("show");
+  document.getElementById("syncUploadBtn").onclick=()=>{closeModal();syncToSupabase();};
+  document.getElementById("syncDownloadBtn").onclick=()=>{closeModal();if(confirm("从云端恢复将覆盖本地数据，确定继续？"))syncFromSupabase();};
+};
 console.log("[代练系统] 已加载知识包 "+window.__PACKS.length+" 个。");}
 
 /* ============================================================
