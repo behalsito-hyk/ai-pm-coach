@@ -1,0 +1,2787 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI产品经理代练系统 · Coach PM</title>
+<style>
+:root{
+  --bg:#0b0f17; --bg2:#111726; --card:#151d2e; --card2:#1b2438;
+  --line:#243149; --line2:#2e3d5c;
+  --tx:#e7edf7; --tx2:#9fb0c9; --tx3:#6b7c99;
+  --indigo:#6366f1; --indigo2:#818cf8;
+  --green:#10b981; --green2:#34d399;
+  --amber:#f59e0b; --pink:#ec4899; --red:#ef4444; --cyan:#06b6d4;
+  --r-lg:18px; --r-md:13px; --r-sm:9px;
+  --shadow:0 12px 40px rgba(0,0,0,.38);
+  --mono:ui-monospace,"SFMono-Regular","JetBrains Mono",Consolas,monospace;
+  --sans:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(1200px 700px at 85% -10%, #1a2140 0%, transparent 55%),
+             radial-gradient(900px 600px at -10% 110%, #101a2e 0%, transparent 55%),
+             var(--bg);
+  color:var(--tx); font-family:var(--sans); overflow:hidden;
+}
+::selection{background:rgba(99,102,241,.35)}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit}
+
+/* ===== layout ===== */
+.app{display:flex;height:100vh;width:100vw}
+.sidebar{width:250px;flex-shrink:0;background:rgba(17,23,38,.72);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:20px 14px;backdrop-filter:blur(8px)}
+.brand{display:flex;align-items:center;gap:11px;padding:4px 8px 16px}
+.brand-logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,#6366f1,#8b5cf6 55%,#ec4899);
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;box-shadow:0 6px 18px rgba(99,102,241,.45)}
+.brand-name{font-weight:800;font-size:16.5px;letter-spacing:.3px}
+.brand-sub{font-size:11px;color:var(--tx3);margin-top:2px;letter-spacing:.5px}
+.nav{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.nav-btn{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;color:var(--tx2);
+  font-size:14px;font-weight:600;transition:.18s;text-align:left;width:100%}
+.nav-btn .ico{font-size:17px;width:22px;text-align:center}
+.nav-btn:hover{background:rgba(99,102,241,.12);color:var(--tx)}
+.nav-btn.active{background:linear-gradient(120deg,rgba(99,102,241,.28),rgba(139,92,246,.16));color:#fff;
+  box-shadow:inset 0 0 0 1px rgba(129,140,248,.5)}
+.level-card{margin-top:auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.level-top{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--tx2)}
+.level-top b{color:var(--amber);font-size:13px}
+.xp-bar{height:7px;background:#0d1320;border-radius:99px;overflow:hidden;margin-top:9px}
+.xp-fill{height:100%;width:0;background:linear-gradient(90deg,var(--amber),#fbbf24);border-radius:99px;transition:width .5s}
+.level-note{font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5}
+.reset-btn{margin-top:10px;width:100%;font-size:11.5px;color:var(--tx3);padding:7px;border-radius:9px;
+  border:1px dashed var(--line2);transition:.15s}
+.reset-btn:hover{color:var(--red);border-color:var(--red)}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{height:58px;border-bottom:1px solid var(--line);display:flex;align-items:center;
+  padding:0 24px;gap:14px;background:rgba(11,15,23,.5);backdrop-filter:blur(8px)}
+.topbar-title{font-weight:700;font-size:15.5px}
+.topbar-desc{font-size:12.5px;color:var(--tx3)}
+.topbar-right{margin-left:auto;display:flex;gap:10px;align-items:center}
+.stat-pill{display:flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);
+  padding:6px 12px;border-radius:99px;font-size:12.5px;color:var(--tx2)}
+.stat-pill b{color:var(--tx)}
+.view{flex:1;overflow:hidden;display:flex;flex-direction:column}
+
+/* ===== chat ===== */
+.chat-wrap{flex:1;display:flex;flex-direction:column;min-height:0}
+.chat-scroll{flex:1;overflow-y:auto;padding:22px 26px;display:flex;flex-direction:column;gap:16px}
+.msg{display:flex;gap:11px;max-width:78%;animation:pop .25s ease}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.msg.user{align-self:flex-end;flex-direction:row-reverse}
+.avatar{width:34px;height:34px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700}
+.msg.coach .avatar{background:linear-gradient(135deg,#6366f1,#a855f7)}
+.msg.user .avatar{background:linear-gradient(135deg,#0ea5e9,#22d3ee);color:#04121c}
+.bubble{padding:12px 15px;border-radius:15px;line-height:1.75;font-size:14px;word-break:break-word}
+.msg.coach .bubble{background:var(--card);border:1px solid var(--line);border-top-left-radius:5px}
+.msg.user .bubble{background:linear-gradient(120deg,#2563eb,#4f46e5);border-top-right-radius:5px;color:#fff}
+.bubble h4{font-size:14px;margin:8px 0 4px;color:var(--indigo2)}
+.bubble h4:first-child{margin-top:0}
+.bubble ul{margin:6px 0 6px 2px;padding-left:18px}
+.bubble li{margin:4px 0}
+.bubble .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:rgba(99,102,241,.18);
+  border:1px solid rgba(129,140,248,.4);color:var(--indigo2);margin:2px 4px 2px 0}
+.bubble .hl{color:var(--amber);font-weight:700}
+.bubble .good{color:var(--green2);font-weight:600}
+.bubble .bad{color:#fca5a5;font-weight:600}
+.bubble code{font-family:var(--mono);font-size:12.5px;background:#0d1320;padding:2px 6px;border-radius:6px;color:#7dd3fc}
+.quick{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{font-size:12.5px;padding:7px 13px;border-radius:99px;background:rgba(99,102,241,.12);
+  border:1px solid rgba(129,140,248,.45);color:#c7d2fe;transition:.15s}
+.chip:hover{background:rgba(99,102,241,.3);transform:translateY(-1px)}
+.chat-input{border-top:1px solid var(--line);padding:14px 26px 18px;background:rgba(11,15,23,.4)}
+.input-box{display:flex;gap:10px;align-items:flex-end;background:var(--card);border:1px solid var(--line2);
+  border-radius:15px;padding:9px 9px 9px 16px;transition:.2s}
+.input-box:focus-within{border-color:var(--indigo);box-shadow:0 0 0 3px rgba(99,102,241,.18)}
+.input-box textarea{flex:1;background:none;border:none;outline:none;color:var(--tx);resize:none;
+  font-size:14px;line-height:1.6;max-height:130px;padding:6px 0}
+.send-btn{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-radius:11px;padding:10px 18px;
+  font-weight:700;font-size:13.5px;transition:.18s;flex-shrink:0}
+.send-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(99,102,241,.4)}
+.send-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.hint-line{font-size:11px;color:var(--tx3);margin-top:8px;text-align:center}
+.typing{display:inline-flex;gap:4px;padding:4px 2px}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--tx3);animation:blink 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
+
+/* ===== generic page ===== */
+.page{flex:1;overflow-y:auto;padding:26px 30px}
+.page-head{margin-bottom:20px}
+.page-head h2{font-size:21px;font-weight:800;letter-spacing:.3px}
+.page-head p{color:var(--tx3);font-size:13px;margin-top:6px;line-height:1.6}
+.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:18px;align-items:center}
+.fbtn{padding:8px 15px;border-radius:99px;font-size:13px;font-weight:600;color:var(--tx2);
+  border:1px solid var(--line);background:var(--card);transition:.16s}
+.fbtn:hover{color:var(--tx)}
+.fbtn.active{background:linear-gradient(120deg,#4f46e5,#7c3aed);color:#fff;border-color:transparent}
+.search{margin-left:auto;background:var(--card);border:1px solid var(--line);border-radius:11px;
+  padding:9px 14px;color:var(--tx);font-size:13px;width:220px;outline:none;transition:.15s}
+.search:focus{border-color:var(--indigo)}
+
+/* ===== knowledge cards ===== */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:15px}
+.kcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:17px;transition:.2s;cursor:pointer}
+.kcard:hover{transform:translateY(-3px);border-color:var(--line2);box-shadow:var(--shadow)}
+.kcard .dom{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 9px;
+  border-radius:99px;margin-bottom:10px}
+.kcard h3{font-size:15.5px;line-height:1.5;margin-bottom:8px}
+.kcard p{font-size:12.6px;color:var(--tx2);line-height:1.65;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.kcard .meta{margin-top:11px;font-size:11px;color:var(--tx3);display:flex;justify-content:space-between}
+.modal{position:fixed;inset:0;background:rgba(4,7,14,.7);backdrop-filter:blur(5px);display:none;
+  align-items:center;justify-content:center;z-index:60;padding:30px}
+.modal.show{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--line2);border-radius:20px;width:min(760px,94vw);
+  max-height:86vh;overflow-y:auto;padding:28px 30px;box-shadow:var(--shadow);animation:pop .25s}
+.modal-box h3{font-size:20px;margin-bottom:4px}
+.modal-box .sub{font-size:12.5px;color:var(--tx3);margin-bottom:16px}
+.modal-body{font-size:14.2px;line-height:1.85;color:#dbe4f2}
+.modal-body p{margin:10px 0}
+.modal-body h4{color:var(--indigo2);margin:16px 0 6px;font-size:15px}
+.modal-body ul{margin:8px 0 10px 2px;padding-left:20px}
+.modal-body li{margin:6px 0}
+.modal-body .callout{background:rgba(245,158,11,.08);border-left:3px solid var(--amber);padding:11px 14px;
+  border-radius:0 10px 10px 0;margin:12px 0;font-size:13.5px;color:#fde8c4}
+.modal-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+.btn{padding:10px 18px;border-radius:11px;font-weight:700;font-size:13.5px;transition:.18s}
+.btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(99,102,241,.4)}
+.btn-ghost{border:1px solid var(--line2);color:var(--tx2)}
+.btn-ghost:hover{color:var(--tx);border-color:var(--tx3)}
+.x{position:sticky;top:0;float:right;margin-left:12px;width:32px;height:32px;border-radius:9px;background:var(--card);
+  border:1px solid var(--line);color:var(--tx2);font-size:15px;display:flex;align-items:center;justify-content:center}
+.x:hover{color:var(--red);border-color:var(--red)}
+
+/* ===== quiz ===== */
+.quiz-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px;max-width:820px;margin:0 auto}
+.quiz-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-size:12.5px;color:var(--tx3)}
+.quiz-head .dom-tag{font-weight:700;padding:3px 10px;border-radius:99px}
+.quiz-q{font-size:16.5px;line-height:1.7;font-weight:600;margin-bottom:20px}
+.opt{display:flex;gap:13px;align-items:flex-start;padding:13px 15px;border:1.5px solid var(--line);
+  border-radius:13px;margin-bottom:11px;cursor:pointer;transition:.16s;font-size:14px;line-height:1.6}
+.opt:hover{border-color:var(--indigo);background:rgba(99,102,241,.07)}
+.opt .key{width:26px;height:26px;border-radius:8px;background:var(--card2);display:flex;align-items:center;
+  justify-content:center;font-weight:700;font-size:12.5px;flex-shrink:0;color:var(--tx2)}
+.opt.correct{border-color:var(--green);background:rgba(16,185,129,.12)}
+.opt.correct .key{background:var(--green);color:#fff}
+.opt.wrong{border-color:var(--red);background:rgba(239,68,68,.1)}
+.opt.wrong .key{background:var(--red);color:#fff}
+.opt.dim{opacity:.5}
+.explain{background:rgba(6,182,212,.07);border:1px solid rgba(6,182,212,.3);border-radius:13px;
+  padding:15px 17px;margin-top:16px;font-size:13.5px;line-height:1.75;color:#c9eef5;display:none}
+.explain.show{display:block;animation:pop .3s}
+.explain b{color:var(--cyan)}
+.quiz-foot{display:flex;justify-content:space-between;margin-top:18px;align-items:center}
+.score-strip{display:flex;gap:10px}
+.score-strip .ss{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 16px;text-align:center}
+.score-strip .ss b{font-size:19px;display:block}
+.score-strip .ss span{font-size:11px;color:var(--tx3)}
+.empty{color:var(--tx3);font-size:13px;text-align:center;padding:40px 0}
+.progress-thin{height:6px;background:#0d1320;border-radius:99px;overflow:hidden;margin-bottom:18px}
+.progress-thin i{display:block;height:100%;background:linear-gradient(90deg,#10b981,#34d399);transition:width .4s}
+
+/* ===== interview ===== */
+.iv-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;
+  transition:.2s;cursor:pointer;border-left:4px solid var(--amber)}
+.iv-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.iv-card .cat{font-size:11px;color:var(--amber);font-weight:700;letter-spacing:.5px}
+.iv-card h3{font-size:15px;margin:7px 0 6px;line-height:1.55}
+.iv-card p{font-size:12.5px;color:var(--tx3);line-height:1.6}
+.iv-area textarea{width:100%;min-height:150px;background:#0d1320;border:1px solid var(--line2);
+  border-radius:13px;padding:14px;color:var(--tx);font-size:14px;line-height:1.75;outline:none;resize:vertical}
+.iv-area textarea:focus{border-color:var(--amber)}
+.checklist li{list-style:none;display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed var(--line)}
+.checklist li:last-child{border:none}
+.checklist .ck{width:20px;height:20px;border-radius:6px;border:2px solid var(--line2);flex-shrink:0;margin-top:1px;cursor:pointer;position:relative}
+.checklist .ck.on{background:var(--green);border-color:var(--green)}
+.checklist .ck.on::after{content:"✓";color:#fff;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
+.checklist span{font-size:13.5px;line-height:1.6;color:#dbe4f2}
+
+/* ===== progress ===== */
+.dash{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:15px;margin-bottom:22px}
+.dcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.dcard .num{font-size:30px;font-weight:800;background:linear-gradient(120deg,#a5b4fc,#c084fc);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.dcard .lbl{font-size:12.5px;color:var(--tx3);margin-top:4px}
+.domain-row{display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px dashed var(--line)}
+.domain-row:last-child{border:none}
+.domain-row .nm{width:120px;font-weight:600;font-size:13.5px}
+.domain-row .bar{flex:1;height:9px;background:#0d1320;border-radius:99px;overflow:hidden}
+.domain-row .bar i{display:block;height:100%;border-radius:99px;transition:width .5s}
+.domain-row .pct{width:46px;text-align:right;font-size:12.5px;color:var(--tx2)}
+.mod-head{display:flex;justify-content:space-between;align-items:baseline;margin:20px 2px 10px;padding-bottom:8px;border-bottom:1px dashed var(--line)}
+.mod-head:first-child{margin-top:4px}
+.mod-title{font-weight:800;font-size:14.5px;letter-spacing:.3px}
+.mod-prog{font-size:12px;color:var(--tx3)}
+@media(max-width:840px){.sidebar{width:70px}.brand-name,.brand-sub,.nav-btn span,.level-card{display:none}
+.brand{justify-content:center}.search{width:140px}}
+
+/* ===== 登录门禁 ===== */
+.auth-gate{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;
+  background:radial-gradient(900px 600px at 80% -10%, #1e2a52 0%, transparent 55%),
+             radial-gradient(800px 500px at 0% 110%, #14203a 0%, transparent 55%),var(--bg);padding:20px}
+.auth-card{width:min(400px,94vw);background:rgba(21,29,46,.92);border:1px solid var(--line2);
+  border-radius:22px;padding:34px 32px 28px;box-shadow:var(--shadow);animation:pop .35s ease}
+.auth-logo{width:56px;height:56px;border-radius:17px;margin:0 auto 14px;display:flex;align-items:center;
+  justify-content:center;font-weight:800;font-size:22px;color:#fff;
+  background:linear-gradient(135deg,#6366f1,#8b5cf6 55%,#ec4899);box-shadow:0 10px 26px rgba(99,102,241,.5)}
+.auth-title{text-align:center;font-size:19px;font-weight:800;letter-spacing:.3px}
+.auth-sub{text-align:center;font-size:12.5px;color:var(--tx3);margin:7px 0 22px;line-height:1.6}
+.auth-field{margin-bottom:13px}
+.auth-field label{display:block;font-size:12.5px;color:var(--tx2);margin-bottom:6px;font-weight:600}
+.auth-input{width:100%;background:#0d1320;border:1px solid var(--line2);border-radius:12px;
+  padding:11px 14px;color:var(--tx);font-size:14px;outline:none;transition:.16s}
+.auth-input:focus{border-color:var(--indigo);box-shadow:0 0 0 3px rgba(99,102,241,.18)}
+.auth-btn{width:100%;margin-top:6px;padding:12px;border-radius:13px;font-weight:800;font-size:14.5px;
+  color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6);transition:.18s}
+.auth-btn:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(99,102,241,.45)}
+.auth-err{display:none;margin-top:12px;font-size:12.5px;color:#fca5a5;background:rgba(239,68,68,.09);
+  border:1px solid rgba(239,68,68,.35);border-radius:10px;padding:9px 12px;line-height:1.5}
+.auth-err.show{display:block;animation:pop .25s}
+.auth-note{margin-top:16px;font-size:11px;color:var(--tx3);line-height:1.7;text-align:center}
+.user-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:12px;color:var(--tx3)}
+.user-row b{color:var(--tx2);font-size:12.5px}
+.logout-btn{font-size:11px;color:var(--tx3);border:1px solid var(--line2);border-radius:8px;padding:4px 10px;transition:.15s}
+.logout-btn:hover{color:var(--amber);border-color:var(--amber)}
+.checkin-btn{width:100%;margin-top:10px;padding:10px;border-radius:11px;font-weight:800;font-size:13px;
+  color:#1a1206;background:linear-gradient(135deg,#f59e0b,#fbbf24);transition:.18s}
+.checkin-btn:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(245,158,11,.45)}
+.checkin-btn.done{background:var(--card2);color:var(--tx3);border:1px solid var(--line);cursor:default;transform:none;box-shadow:none}
+.toast{position:fixed;top:22px;left:50%;transform:translateX(-50%) translateY(-8px);z-index:120;
+  background:var(--card);border:1px solid rgba(245,158,11,.55);color:#fde8c4;padding:12px 22px;border-radius:13px;
+  font-size:13.5px;font-weight:700;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.3s}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* 知识网络 */
+#kbCanvas{width:100%;min-height:520px;border-radius:16px;background:radial-gradient(ellipse at 20% 30%,rgba(99,102,241,.06),transparent 60%),var(--bg2);border:1px solid var(--line);cursor:grab;display:block}
+#kbCanvas:active{cursor:grabbing}
+.graph-tip{position:fixed;z-index:61;background:var(--card);border:1px solid var(--line2);border-radius:11px;padding:9px 13px;font-size:12.5px;box-shadow:var(--shadow);pointer-events:none;display:none;max-width:280px;line-height:1.5}
+.graph-tip.show{display:block}
+/* 个人信息 */
+.profile-field{margin-bottom:11px}
+.profile-field label{display:block;font-size:12px;color:var(--tx2);margin-bottom:4px;font-weight:600}
+.profile-field input,.profile-field select{width:100%;background:#0d1320;border:1px solid var(--line2);border-radius:10px;padding:10px 13px;color:var(--tx);font-size:13px;outline:none}
+.profile-field input:focus{border-color:var(--indigo);box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+.profile-hint{font-size:11px;color:var(--tx3);margin-top:3px}
+.forgot-link{color:var(--indigo2);font-size:12.5px;cursor:pointer;display:inline-block;margin-top:10px}
+.forgot-link:hover{text-decoration:underline}
+.forgot-title{text-align:center;font-size:18px;font-weight:700;margin:10px 0 18px}
+/* 工具推荐 */
+.tool-pick{margin-bottom:18px;cursor:pointer}
+.pick-label{font-size:13px;font-weight:700;color:var(--amber);margin-bottom:8px;letter-spacing:1px}
+.pick-card{background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(255,255,255,.02));border:1.5px solid rgba(245,158,11,.5);border-radius:18px;padding:20px 22px;transition:.2s}
+.pick-card:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(245,158,11,.2)}
+.pick-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.pick-cat{font-size:11px;font-weight:700;color:var(--amber);letter-spacing:.5px}
+.pick-rating{color:var(--amber);font-size:13px}
+.pick-card h3{font-size:19px;margin-bottom:6px}
+.pick-card p{color:var(--tx2);font-size:13px;line-height:1.65}
+.pick-tags{margin-top:8px;font-size:11px;color:var(--tx3)}
+.tcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;transition:.2s;cursor:pointer}
+.tcard:hover{transform:translateY(-3px);border-color:var(--line2);box-shadow:var(--shadow)}
+.tcard .tcat{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;margin-bottom:8px}
+.tcard h3{font-size:14.5px;margin-bottom:5px;line-height:1.5}
+.tcard p{font-size:12.5px;color:var(--tx2);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tcard .meta{font-size:11px;color:var(--tx3);margin-top:8px;display:flex;justify-content:space-between}
+/* 签到日历 */
+.cal-wrap{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-top:16px}
+.cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.cal-head h3{font-size:15px;font-weight:700}
+.cal-nav{display:flex;gap:6px}
+.cal-nav button{font-size:13px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);color:var(--tx2);transition:.15s}
+.cal-nav button:hover{color:var(--tx);border-color:var(--indigo);background:rgba(99,102,241,.1)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center}
+.cal-wday{padding:6px 0;font-size:11px;color:var(--tx3);font-weight:700}
+.cal-day{padding:7px 0;font-size:13px;border-radius:8px;transition:.15s;position:relative;cursor:default}
+.cal-day.other{color:var(--tx3);opacity:.35}
+.cal-day.today{font-weight:800;color:var(--amber)}
+.cal-day.checked{background:rgba(16,185,129,.2);color:var(--green2);font-weight:700}
+.cal-day.checked::after{content:"✓";position:absolute;top:-1px;right:3px;font-size:9px;color:var(--green2)}
+.cal-day.today.checked{box-shadow:inset 0 0 0 1.5px var(--green2)}
+.cal-stat{display:flex;gap:16px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--tx2)}
+.cal-stat b{color:var(--tx);font-weight:700}
+</style>
+</head>
+<body>
+<div class="auth-gate" id="authGate"></div>
+<div class="app" id="appRoot" style="display:none">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">PM</div>
+      <div>
+        <div class="brand-name">AI产品经理代练</div>
+        <div class="brand-sub">COACH · OFFLINE</div>
+      </div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="level-card">
+      <div class="user-row"><span>当前账号</span><b id="userVal">—</b><button class="logout-btn" id="logoutBtn">退出</button></div>
+      <div class="level-top"><span>当前段位</span><b id="levelName">LV.1 见习PM</b></div>
+      <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
+      <div class="level-note" id="levelNote"></div>
+      <button class="checkin-btn" id="checkinBtn">🎁 每日签到 · 领 100 积分</button>
+      <button class="reset-btn" id="resetBtn">清空进度重新开始</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="pageTitle">教练陪练</div>
+        <div class="topbar-desc" id="pageDesc"></div>
+      </div>
+      <div class="topbar-right">
+        <div class="stat-pill">📦 知识 <b id="packDateVal">内置</b></div>
+        <div class="stat-pill">🔥 连续 <b id="streakVal">0</b> 天</div>
+        <div class="stat-pill">⭐ 积分 <b id="pointVal">0</b></div>
+      </div>
+    </div>
+    <div class="view" id="view"></div>
+  </div>
+</div>
+
+<div class="modal" id="modal"><div class="modal-box" id="modalBox"></div></div>
+
+<script src="packs/manifest.js"></script>
+<script>
+"use strict";
+/* 全局异常捕获 */
+window.onerror=function(msg,url,line,col,err){const e=document.getElementById("globalToast");if(!e)return;
+  e.textContent="⚠️ 系统异常："+(msg||"").slice(0,80);e.classList.add("show");setTimeout(()=>e.classList.remove("show"),4000);return true;};
+window.addEventListener("unhandledrejection",function(e){const t=document.getElementById("globalToast");if(!t)return;
+  t.textContent="⚠️ 系统异常："+((e.reason&&e.reason.message)||"").slice(0,80);t.classList.add("show");setTimeout(()=>t.classList.remove("show"),4000);});
+/* ============================================================
+ * AI产品经理代练系统 · 离线单文件版
+ * 五大模块：教练陪练 / 知识库 / 刷题训练 / 面试模拟 / 成长档案
+ * ============================================================ */
+
+/* ---------- 领域定义 ---------- */
+const DOMAINS = {
+  base:      {name:"大模型基础", icon:"🧠", color:"#6366f1", bg:"rgba(99,102,241,.15)"},
+  product:   {name:"AI产品设计", icon:"🧭", color:"#10b981", bg:"rgba(16,185,129,.15)"},
+  interview: {name:"面试实战",   icon:"🎯", color:"#f59e0b", bg:"rgba(245,158,11,.15)"},
+  hr:        {name:"AI+HR",      icon:"🤝", color:"#ec4899", bg:"rgba(236,72,153,.15)"},
+  trend:     {name:"前沿趋势",   icon:"🚀", color:"#06b6d4", bg:"rgba(6,182,212,.15)"},
+  custom:    {name:"自定义",     icon:"📄", color:"#8b5cf6", bg:"rgba(139,92,246,.15)"}
+};
+
+/* ---------- 知识库 ---------- */
+const KB = [
+ {
+  "id": "b1",
+  "domain": "base",
+  "mod": "A1 原理认知",
+  "no": 1,
+  "title": "大语言模型如何工作：下一个词预测",
+  "tags": [
+   "llm",
+   "原理",
+   "transformer",
+   "生成式",
+   "预测",
+   "语言模型",
+   "next token"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>大语言模型（LLM）的核心机制惊人地简单：<b>根据前文，预测下一个最可能出现的词（Token）</b>。它逐词生成，每次只回答\"下一个词是什么\"，循环往复就成了看似智能的长文输出。Transformer 架构中的注意力机制（Attention）让模型能同时关注上下文各处的关联，这是它理解长文本的关键。</p>\n<h4>为什么 AI PM 必须掌握</h4>\n<ul>\n<li>「预测下一个词」解释了模型的一切强项与弱点：<b>流畅但未必真实、像人话但未必懂逻辑</b>。</li>\n<li>理解了原理，你才能向开发/算法提出正确的问题，也才能在面试中不露怯。</li>\n<li>它决定了产品设计的基本约束：输出是逐词流式的（所以有打字机效果）、是概率性的（所以同一问题答案会变）。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>不需要会推导公式，但要能用一句话说清机制：「模型本质是超级文字接龙机，能力来自海量语料中学到的语言与知识规律」。</li>\n<li>流式输出（SSE/打字机效果）是 AI 产品的标配体验设计，源头就在这里。</li>\n</ul>\n<div class=\"callout\">💡 面试锚点：被问「LLM 原理」，答到「下一个词预测 + 注意力机制 + 概率采样」三层即合格，切忌背工程师细节。</div>"
+ },
+ {
+  "id": "b2",
+  "domain": "base",
+  "mod": "A1 原理认知",
+  "no": 2,
+  "title": "Token 与上下文窗口：AI 产品的计量单位",
+  "tags": [
+   "token",
+   "上下文",
+   "窗口",
+   "计费",
+   "长度",
+   "context",
+   "成本"
+  ],
+  "body": "<h4>概念本质</h4>\n<p><b>Token</b> 是模型处理文本的最小单位，不等于字也不等于词：中文约 1 个汉字 ≈ 1~2 token，英文单词常拆成 1~3 token。<b>上下文窗口（Context Window）</b>是模型一次能同时「看到+生成」的 token 总量，如 128K 约可处理 9 万汉字。</p>\n<h4>为什么 AI PM 必须掌握</h4>\n<ul>\n<li><b>成本核算的地基</b>：API 按输入/输出 token 分别计价，任何成本模型都从这里算起。</li>\n<li><b>能力边界的硬约束</b>：超出窗口的内容会被截断或报错——长文档总结、超长会话、大文件解析都受它限制。</li>\n<li><b>体验设计的依据</b>：输入字数限制、\"后面的内容怎么丢了\"这类用户问题的根因都在这里。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>估算成本三步：平均单次输入 token × 次数 × 输入单价 + 输出侧同理。</li>\n<li>长文档场景先问三个数：窗口多大、单次费用多少、超限如何降级（切分/摘要/拒绝）。</li>\n</ul>\n<div class=\"callout\">💡 面试锚点：「估算一个功能月成本」是高频题，先报 token 口径再乘单价，展示量化思维。</div>"
+ },
+ {
+  "id": "b3",
+  "domain": "base",
+  "mod": "A1 原理认知",
+  "no": 3,
+  "title": "Temperature 与采样参数：输出的松紧旋钮",
+  "tags": [
+   "temperature",
+   "温度",
+   "top p",
+   "采样",
+   "随机",
+   "确定性",
+   "参数"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>模型生成时是在概率分布上「抽签选词」。<b>Temperature</b> 控制抽签的随机程度：值越低，越倾向选概率最高的词，输出保守稳定；值越高，低概率词也有机会，输出多样有创意。Top-P 是同类作用的另一种控制方式。</p>\n<h4>为什么 AI PM 必须掌握</h4>\n<ul>\n<li>同一个模型，参数不同表现天差地别——<b>调参是零成本的产品优化手段</b>。</li>\n<li>写 PRD 时把「任务类型 → 参数档位」写清楚，是专业度的体现。</li>\n</ul>\n<h4>决策要点</h4>\n<ul>\n<li><b>低温度（0~0.3）</b>：抽取、分类、判断、结构化输出、代码——要稳定准确。</li>\n<li><b>高温度（0.7~1.2）</b>：文案、创意、头脑风暴——要多样新颖。</li>\n<li>事实性任务配高温度是典型事故源。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：<b>判断用低温，创作用高温</b>。八字真言，面试直接可用。</div>"
+ },
+ {
+  "id": "b4",
+  "domain": "base",
+  "mod": "A2 训练与选型",
+  "no": 1,
+  "title": "训练三段流水线：预训练 → SFT → RLHF",
+  "tags": [
+   "预训练",
+   "sft",
+   "rlhf",
+   "微调",
+   "对齐",
+   "训练",
+   "指令微调",
+   "人类反馈"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>一个能对话的模型通常经历三段训练：</p>\n<ul>\n<li><b>① 预训练（Pre-train）</b>：喂海量文本，目标只有\"预测下一个词\"，练出语言能力与世界知识，耗巨量算力。</li>\n<li><b>② SFT（监督微调）</b>：用人工编写的「指令-回答」样本，教会模型按指令好好说话。</li>\n<li><b>③ RLHF（人类反馈强化学习）</b>：用人类对多个回答的偏好排序训练奖励模型，再强化学习对齐人类偏好，让输出更有用、更安全。</li>\n</ul>\n<h4>为什么 AI PM 必须掌握</h4>\n<ul>\n<li>理解三段分工，才能分清「模型笨」是哪一段的问题，也才能听懂算法同事在说什么。</li>\n<li>企业自建模型能力时，你要判断投入在哪一段：<b>绝大多数业务方只做 SFT，预训练是巨头游戏</b>。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>业务侧常说\"微调\"，默认指 SFT；它的瓶颈是高质量样本量，而非算力。</li>\n<li>RLHF/对齐决定了模型\"听不听话、敢不敢拒答\"，做内容安全方案时相关。</li>\n</ul>\n<div class=\"callout\">💡 面试锚点：「预训练学能力、SFT 学规矩、RLHF 学偏好」——一句话三段，清晰且够用。</div>"
+ },
+ {
+  "id": "b5",
+  "domain": "base",
+  "mod": "A2 训练与选型",
+  "no": 2,
+  "title": "三条路线选型决策树：Prompt / RAG / 微调",
+  "tags": [
+   "选型",
+   "决策树",
+   "prompt",
+   "rag",
+   "微调",
+   "路线",
+   "成本",
+   "技术选型"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>让模型胜任业务，有三条由轻到重的路线：<b>提示词工程（改问法）→ RAG（外挂知识库）→ 微调（改模型）</b>。选错路线=烧钱烧时间。</p>\n<h4>决策要点（AI PM 的核心功夫）</h4>\n<ul>\n<li><b>能 Prompt 解决就不用 RAG</b>：任务清晰、数据少、要快速验证 → 先把提示词做到极致，成本几乎为零。</li>\n<li><b>该上 RAG 的信号</b>：依赖私有知识/知识会更新/需要引用溯源/答错要能定位原因。</li>\n<li><b>该考虑微调的信号</b>：要改变模型的行为风格、输出格式或领域习惯，且 Prompt+RAG 已到瓶颈、手里有足量高质量样本。</li>\n</ul>\n<h4>成本与风险对比</h4>\n<ul>\n<li>成本与周期：<b>Prompt < RAG < 微调</b>；迭代速度正好相反。</li>\n<li>误区纠正：微调不解决\"知识更新\"（知识更新仍靠 RAG）；数据质量差会「越调越歪」。</li>\n</ul>\n<div class=\"callout\">💡 面试锚点：标准姿态是先说「能用轻的就不用重的」，再给场景判断+成本论证。这是 AI PM 技术品味的试金石。</div>"
+ },
+ {
+  "id": "b6",
+  "domain": "base",
+  "mod": "A2 训练与选型",
+  "no": 3,
+  "title": "微调知识地图：SFT / LoRA / 蒸馏 / 量化",
+  "tags": [
+   "lora",
+   "蒸馏",
+   "量化",
+   "轻量微调",
+   "部署",
+   "微调方法",
+   "成本优化"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>「微调」不是一种技术，而是一个工具箱：</p>\n<ul>\n<li><b>全参数微调</b>：整个模型重训，效果好但贵，需大量样本与算力。</li>\n<li><b>LoRA（轻量微调）</b>：只训练外挂的小参数模块，冻结原模型，成本低一个量级以上，是当前业务微调主流。</li>\n<li><b>蒸馏</b>：用大模型教小模型，把能力压缩进更便宜更快的模型。</li>\n<li><b>量化</b>：降低参数精度换取部署成本下降，常伴轻微效果损失。</li>\n</ul>\n<h4>为什么 AI PM 必须掌握</h4>\n<ul>\n<li>PM 学这些不是为动手，而是为<b>在决策树上判断「值不值」</b>：何时用 LoRA 控制成本、何时用蒸馏降本部署。</li>\n<li>与千问办公「标准/高级模式」呼应：蒸馏+小模型路由是行业降本的通用打法。</li>\n</ul>\n<h4>决策要点</h4>\n<ul>\n<li>样本 < 几百条：别微调，回头做 Prompt + RAG。</li>\n<li>要私有化部署且预算紧：量化/蒸馏进候选。</li>\n<li>任何微调立项前先写清：改什么行为、用什么数据评、预期提升多少。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：LoRA=便宜微调，蒸馏=大教小，量化=省部署。三个词撑起技术选型会上的发言权。</div>"
+ },
+ {
+  "id": "b7",
+  "domain": "base",
+  "mod": "A3 关键技术",
+  "no": 1,
+  "title": "Embedding 与向量检索：让机器理解语义",
+  "tags": [
+   "embedding",
+   "向量",
+   "向量检索",
+   "语义",
+   "相似度",
+   "向量化",
+   "数据库"
+  ],
+  "body": "<h4>概念本质</h4>\n<p><b>Embedding（向量化）</b>：把一段文字变成一串数字（向量），语义相近的文字，向量在空间中距离近。「如何申请年假」和「年假怎么休」字面不同，向量却很近。<b>向量检索</b>：用户问题也变成向量，在向量库里找距离最近的若干段内容——这就是按语义搜索，而非关键词匹配。</p>\n<h4>为什么 AI PM 必须掌握</h4>\n<ul>\n<li>Embedding 是 RAG、语义搜索、相似推荐、聚类分析的共同地基——<b>不懂它就不可能拆清楚知识类产品</b>。</li>\n<li>它解释了「为什么换个问法答案就变了」：问法向量离资料远了，召回就差。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>向量库（如各类向量数据库）存的就是这些数字，选型关注：容量、检索速度、过滤能力。</li>\n<li>「答非所问」排查链：先看召回的片段对不对，90% 问题出在检索环节而非生成环节。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：Embedding 把文字变坐标，向量检索找邻居。</div>"
+ },
+ {
+  "id": "b8",
+  "domain": "base",
+  "mod": "A3 关键技术",
+  "no": 2,
+  "title": "RAG 全链路拆解：知识类产品的骨架",
+  "tags": [
+   "rag",
+   "检索增强",
+   "知识库",
+   "召回",
+   "切分",
+   "重排",
+   "引用",
+   "chunk"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>RAG（检索增强生成）= 先查资料再回答。模型不记得你的私有知识、也记不住训练截止后的信息，RAG 在生成前把相关资料检索出来塞给模型。完整链路五步：</p>\n<ul>\n<li><b>① 切分（Chunking）</b>：文档切成合适大小的块——太大混入噪声，太小丢失语义。</li>\n<li><b>② 向量化（Embedding）</b>：块变向量入库。</li>\n<li><b>③ 向量检索（召回）</b>：用户问题变向量，找出最相似的 Top-N 块。</li>\n<li><b>④ 重排（Rerank）</b>：对召回结果精排，把真正相关的排前面。</li>\n<li><b>⑤ 生成 + 引用</b>：模型基于片段作答，附来源引用。</li>\n</ul>\n<h4>为什么 AI PM 必须掌握</h4>\n<ul>\n<li>知识问答、企业知识库、客服机器人——绝大多数知识类产品都是 RAG 变体。</li>\n<li><b>坏案例归因能力</b>：答不出=资料缺失；答非所问=切分/检索问题；编造=生成约束不足。能按链路定位问题，是 AI PM 与运营的分水岭。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>上线前手绘一遍全链路图（学习计划 W7 的硬要求）。</li>\n<li>优化顺序通常是：资料质量 → 切分策略 → 检索召回 → 提示词约束。</li>\n</ul>\n<div class=\"callout\">💡 面试锚点：「讲清 RAG 全链路 + 给一个坏案例归因」是中级 AI PM 面试的必考组合。</div>"
+ },
+ {
+  "id": "b9",
+  "domain": "base",
+  "mod": "A3 关键技术",
+  "no": 3,
+  "title": "Agent 核心机制：Function Call / ReAct / 记忆",
+  "tags": [
+   "agent",
+   "智能体",
+   "function call",
+   "react",
+   "工具调用",
+   "记忆",
+   "规划",
+   "执行"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>对话模型只会\"说\"，Agent 会\"做\"。三个核心机制：</p>\n<ul>\n<li><b>Function Call（工具调用）</b>：模型判断\"现在该调哪个工具、传什么参数\"，程序真正执行后把结果回传模型。这是 Agent 的手。</li>\n<li><b>ReAct 循环</b>：思考 → 行动 → 观察结果 → 再思考，循环推进直到任务完成。这是 Agent 的腿。</li>\n<li><b>记忆</b>：短期记忆（当前任务上下文）+ 长期记忆（跨会话沉淀的用户/业务知识）。这是 Agent 的脑。</li>\n</ul>\n<h4>为什么 AI PM 必须掌握</h4>\n<ul>\n<li>2026 年产品叙事的主战场就是 Agent，从办公智能体到数字员工都建立在这套机制上。</li>\n<li><b>Agent 的失败模式与对话产品不同</b>：错在\"执行链路\"（调错工具、循环卡死、权限不足）而非\"说错话\"，所以产品设计要有执行日志、失败重试、关键步人工确认。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>评估 Agent 看任务完成率与步骤效率，不只看单轮回答质量。</li>\n<li>对照前沿知识包里的「办公 Agent 四层架构」，可把任何智能体产品拆成规划/工具/运行时/协作四层。</li>\n</ul>\n<div class=\"callout\">💡 面试锚点：「Function Call 是手、ReAct 是循环、记忆分长短」——再补一句执行可观测与人工确认，就是完整答案。</div>"
+ },
+ {
+  "id": "b10",
+  "domain": "base",
+  "mod": "A3 关键技术",
+  "no": 4,
+  "title": "MCP 与多智能体编排：Agent 的连接标准",
+  "tags": [
+   "mcp",
+   "多智能体",
+   "编排",
+   "协议",
+   "生态",
+   "model context protocol",
+   "协作"
+  ],
+  "body": "<h4>概念本质</h4>\n<ul>\n<li><b>MCP（Model Context Protocol）</b>：连接「模型」与「工具/数据源」的标准化协议，类似 AI 世界的 USB 接口——工具方按标准封装一次，任何支持 MCP 的 Agent 都能即插即用。</li>\n<li><b>多智能体（Multi-Agent）</b>：多个专业 Agent 分工协作（研究/写作/排期各管一段），通过结构化交接完成复杂任务，比单一全能 Agent 更稳更专业。</li>\n</ul>\n<h4>为什么 AI PM 必须掌握</h4>\n<ul>\n<li>MCP 决定生态位：产品是「做工具被接入」还是「做入口接别人」，是战略选择题。</li>\n<li>2026 年办公 Agent 竞赛的底层就是 MCP + Skill 生态（对照前沿包中 WorkBuddy 架构）。</li>\n<li>多智能体不是越多越好——<b>任务天然有分工时才拆</b>，否则徒增协调成本与失败点。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>MCP vs 传统插件：插件是一对一定制，MCP 是标准化复用，生态效应完全不同。</li>\n<li>判断是否上多智能体：单 Agent 上下文是否爆、职责是否冲突、是否需要并行。</li>\n</ul>\n<div class=\"callout\">💡 面试锚点：「MCP 之于 Agent，如 USB 之于外设」——一个类比讲透协议价值。</div>"
+ },
+ {
+  "id": "b11",
+  "domain": "base",
+  "mod": "A3 关键技术",
+  "no": 5,
+  "title": "多模态能力与能力边界判断",
+  "tags": [
+   "多模态",
+   "图片",
+   "语音",
+   "视频",
+   "能力边界",
+   "omni",
+   "图生文"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>多模态=模型不止处理文字，还能理解/生成图片、语音、视频。它把 AI 的适用面从\"文档工作\"扩大到\"看、听、说、画\"，也是豆包工作等办公产品主打多模态交付的原因。</p>\n<h4>为什么 AI PM 必须掌握</h4>\n<p>PM 的核心功夫不是背能力清单，而是<b>判断边界</b>——每个需求过三关：</p>\n<ul>\n<li><b>能力关</b>：模型在这类任务上的真实水平？小规模实测，别信发布会。</li>\n<li><b>数据关</b>：有没有喂得动它的数据/素材？</li>\n<li><b>成本关</b>：多模态调用普遍更贵更慢，单位经济算得过账吗？</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>维护一份「AI 做不了清单」：复杂实时推理、高准确率硬要求、强责任场景（医疗诊断、法律结论）、细粒度实时控制。</li>\n<li>立项文档里写明边界判断过程，比结论本身更能体现专业度。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：能力、数据、成本，三关都过才立项。</div>"
+ },
+ {
+  "id": "b12",
+  "domain": "base",
+  "mod": "A4 局限与评估",
+  "no": 1,
+  "title": "幻觉：成因与产品化对策",
+  "tags": [
+   "幻觉",
+   "hallucination",
+   "编造",
+   "可信",
+   "事实性",
+   "一本正经胡说"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>模型的训练目标是「预测最像人话的下一个词」，不是「保证事实正确」。所以它会一本正经地编造，且语气越自信越危险——这就是幻觉（Hallucination）。</p>\n<h4>为什么 AI PM 必须掌握</h4>\n<p>幻觉是 AI 产品的<b>第一风险项</b>。专业姿态不是消灭它（做不到），而是把它变成可管理的产品问题。</p>\n<h4>产品化对策四层</h4>\n<ul>\n<li><b>① 接检索</b>：RAG 让回答基于真实资料，强制引用来源。</li>\n<li><b>② 降自由度</b>：事实任务低温度 + 结构化输出 + 明确\"不知道就说不知道\"。</li>\n<li><b>③ 后置校验</b>：关键字段用规则或第二个模型核验（如数字、日期、法条）。</li>\n<li><b>④ 体验兜底</b>：置信度表达、可重新生成、人工接管入口、反馈闭环。</li>\n</ul>\n<div class=\"callout\">💡 面试金句：幻觉无法根除，产品目标不是零幻觉，而是「可发现、可纠正、可追责」。这句一定要说。</div>"
+ },
+ {
+  "id": "b13",
+  "domain": "base",
+  "mod": "A4 局限与评估",
+  "no": 2,
+  "title": "模型评估入门：PM 的评测素养",
+  "tags": [
+   "评估",
+   "评测",
+   "测试集",
+   "指标",
+   "准确率",
+   "benchmark",
+   "对比测试"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>模型好不好，不能凭感觉。评估=用<b>标准化测试集 + 量化指标</b>衡量模型输出质量，并在每次改动后重测对比。常见基础指标：准确率（答对的比例）、召回率（该找到的找到了多少）、幻觉率、格式合规率。</p>\n<h4>为什么 AI PM 必须掌握</h4>\n<ul>\n<li>AI 输出是概率性的，「感觉还行」不能上线——<b>评估思维是 AI PM 区别于传统 PM 的第一基本功</b>。</li>\n<li>选型对比（A 模型 vs B 模型）、方案迭代（调优前后）全靠评估数据说话。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>从 50 条真实问题起步建测试集：高频题 60% + 边界题 25% + 对抗题 15%。</li>\n<li>每题写清「什么算对」的判定标准，否则测了也白测。</li>\n<li>完整评估方法论见 B5 模块「评估集设计与三种评估方法」。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：没有评估集的 AI 项目=没有验收标准的工程，必然烂尾。</div>"
+ },
+ {
+  "id": "p1",
+  "domain": "product",
+  "mod": "B1 认知框架",
+  "no": 1,
+  "title": "AI 产品与传统产品的四大本质差异",
+  "tags": [
+   "差异",
+   "概率性",
+   "数据依赖",
+   "评估",
+   "成本",
+   "产品观"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>把传统产品方法论直接套在 AI 产品上会处处失灵。四大差异：</p>\n<ul>\n<li><b>① 输出是概率性的</b>：传统功能同样输入必同样输出；AI 同样输入可能次次不同。产品设计必须为不确定性留余地。</li>\n<li><b>② 效果依赖数据与模型</b>：需求分析之外，还要做任务定义、数据方案、模型选型三条新工作线。</li>\n<li><b>③ 质量靠评估不靠验收</b>：传统产品测完即交付；AI 功能要持续评测、持续迭代，评估集是核心资产。</li>\n<li><b>④ 成本随用量线性涨</b>：每次调用都在花 token 费，商业模式必须算清单次成本。</li>\n</ul>\n<h4>对 PM 的意义</h4>\n<ul>\n<li>PRD 新增四块：任务定义、数据方案、评估体系、成本模型——这是 AI PRD 与传统 PRD 的差异清单。</li>\n<li>面试回答「AI 产品与传统产品的区别」，按这四条展开即满分框架。</li>\n</ul>\n<div class=\"callout\">💡 一句话：传统产品设计确定性，AI 产品设计不确定性下的信任与兜底。</div>"
+ },
+ {
+  "id": "p2",
+  "domain": "product",
+  "mod": "B1 认知框架",
+  "no": 2,
+  "title": "AI 产品经理能力模型与工作流程",
+  "tags": [
+   "能力模型",
+   "工作流",
+   "技能",
+   "职责",
+   "转型",
+   "竞争力"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>AI PM = 传统 PM 基本功 + 三项新能力：</p>\n<ul>\n<li><b>技术理解力</b>：懂 LLM/RAG/Agent 到「能做决策、能对齐研发」的深度，不写代码。</li>\n<li><b>评估设计力</b>：会定指标、建测试集、组织人工评估与自动评估——AI 时代的产品验收权在懂评估的人手里。</li>\n<li><b>风险治理力</b>：幻觉、合规、安全、兜底方案的产品化设计。</li>\n</ul>\n<h4>典型工作流程</h4>\n<ul>\n<li>场景判断 → 任务定义 → 数据方案 → 技术选型（Prompt/RAG/微调）→ 体验与兜底设计 → 评估体系 → 成本建模 → 灰度上线 → 数据回流迭代。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>对照你的 26 周计划：阶段 0-2 建技术理解力，阶段 3 建评估与方案力，阶段 4 补作品集证据。</li>\n<li>简历上\"懂 AI\"要靠作品说话：demo + 评估数据 + 复盘文档，一个都不能少。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：技术理解 × 评估设计 × 风险治理，三项新能力撑起 AI PM 岗位画像。</div>"
+ },
+ {
+  "id": "p3",
+  "domain": "product",
+  "mod": "B2 需求与场景",
+  "no": 1,
+  "title": "场景适配度评估：价值 × 可行性 × 风险",
+  "tags": [
+   "场景判断",
+   "立项",
+   "价值",
+   "可行性",
+   "风险",
+   "选型",
+   "需求评估"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>「这个场景适不适合做 AI」用三维框架判断，每维 1~5 分：</p>\n<ul>\n<li><b>价值维</b>：痛点频次高不高？节省的时间/钱可量化吗？用户现在怎么忍的？</li>\n<li><b>可行性维</b>：当前模型能力够不够（实测！）？数据拿得到吗？成本算得过账吗？</li>\n<li><b>风险维</b>：出错的代价多大？涉及哪些合规与隐私？错了能不能撤回？</li>\n</ul>\n<h4>决策要点</h4>\n<ul>\n<li>三维都高 → 直接立项；价值高风险高 → 缩小范围先做只读/建议型功能；可行性低 → 先用小 demo 实测模型，用数据否决或确认。</li>\n<li><b>先找「容错空间大 + 频次高」的场景落地</b>，积累信任后再进高风险区（参考千问办公先做内容交付、不碰决策）。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>每份立项文档放一张三维评分表，评分过程比分数更能说服评审。</li>\n</ul>\n<div class=\"callout\">💡 面试锚点：被问「这个需求该不该做 AI」，张口就是三维框架+先实测后立项，稳。</div>"
+ },
+ {
+  "id": "p4",
+  "domain": "product",
+  "mod": "B2 需求与场景",
+  "no": 2,
+  "title": "把业务需求翻译成 AI 任务",
+  "tags": [
+   "任务定义",
+   "分类",
+   "抽取",
+   "摘要",
+   "问答",
+   "检索",
+   "翻译需求"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>业务方说的是\"帮我提效\"，AI 听得懂的是具体任务类型。PM 的核心翻译动作：把业务需求落到六种基本 AI 任务之一或组合：</p>\n<ul>\n<li><b>分类</b>：这条反馈属于哪类？（投诉/咨询/建议）</li>\n<li><b>抽取</b>：合同里的金额、期限、责任方是什么？</li>\n<li><b>总结</b>：会议录音 → 结构化纪要。</li>\n<li><b>问答</b>：基于知识库回答（RAG 主战场）。</li>\n<li><b>检索</b>：找到最相关的文档/候选人/案例。</li>\n<li><b>生成</b>：写初稿、做 PPT、生成图片视频。</li>\n</ul>\n<h4>为什么 AI PM 必须掌握</h4>\n<ul>\n<li>任务类型决定了技术方案（分类用微调效果好、知识问答用 RAG）、评估指标（分类看准确率、检索看召回）和风险点。</li>\n<li>翻译不清楚，研发就会按最复杂的方式过度设计。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>写任务定义文档：业务目标 → 任务类型 → 输入输出规范 → 判定标准 → 失败代价。</li>\n<li>复合需求要拆成任务链：先抽取、再生成，每段单独可评估。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：分类、抽取、总结、问答、检索、生成——六类任务是 AI 需求分析的通用语言。</div>"
+ },
+ {
+  "id": "p5",
+  "domain": "product",
+  "mod": "B3 方案与数据",
+  "no": 1,
+  "title": "AI 产品的数据方案设计",
+  "tags": [
+   "数据方案",
+   "标注",
+   "清洗",
+   "语料",
+   "合规",
+   "数据获取"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>数据方案回答四个问题：<b>需要什么数据、从哪来、怎么加工、合规怎么过</b>。它是 AI 项目的地基，数据烂则模型烂。</p>\n<h4>设计要点</h4>\n<ul>\n<li><b>资料清单</b>：列出所有需要的数据源（文档、系统记录、人工标注），评估质量与缺口。</li>\n<li><b>获取渠道</b>：内部系统导出 / 公开资料 / 爬取（注意授权）/ 采购 / 人工生产。</li>\n<li><b>清洗规则</b>：去重、去噪、格式统一、敏感信息脱敏——写进文档而不是留在口头。</li>\n<li><b>标注需求</b>：谁来标、标注规范、质检抽样比例；标注质量直接决定监督微调与评估集质量。</li>\n<li><b>合规自查</b>：个人信息有无授权、数据用途是否超范围、能否删除（对应个保法）。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>RAG 项目的数据方案重点是「资料覆盖度」：用户会问的 80% 问题，资料库能否兜住。</li>\n<li>数据方案与任务定义文档配套产出（学习计划 W14）。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：清单、渠道、清洗、标注、合规——数据方案五件套。</div>"
+ },
+ {
+  "id": "p6",
+  "domain": "product",
+  "mod": "B3 方案与数据",
+  "no": 2,
+  "title": "冷启动与数据飞轮",
+  "tags": [
+   "冷启动",
+   "数据飞轮",
+   "反馈闭环",
+   "增长",
+   "迭代",
+   "bootstrapping"
+  ],
+  "body": "<h4>概念本质</h4>\n<ul>\n<li><b>冷启动</b>：产品上线初期没数据没反馈，效果从何而来？策略：人工精选种子语料/规则兜底/邀请少量真实用户共建/用通用模型+强提示词先跑起来。</li>\n<li><b>数据飞轮</b>：使用 → 收集反馈（点赞点踩、编辑率、采纳率）→ 优化（评估集扩充/提示词迭代/语料补充）→ 效果变好 → 更多人用。AI 产品的真正壁垒是转起来的飞轮，不是首发功能。</li>\n</ul>\n<h4>为什么 AI PM 必须掌握</h4>\n<ul>\n<li>飞轮设计要写进第一版方案：<b>反馈入口在哪、数据回流到哪、谁消费这些数据</b>，想清楚才上线。</li>\n<li>面试谈增长与壁垒时，飞轮叙事远比功能清单有说服力。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>最小反馈闭环：点踩 → 进坏案例库 → 每周归因 → 进评估集验证修复。</li>\n<li>警惕「伪飞轮」：收了反馈但没人处理，等于没设计。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：冷启动靠种子，长期增长靠飞轮；飞轮的轴心是反馈闭环。</div>"
+ },
+ {
+  "id": "p7",
+  "domain": "product",
+  "mod": "B4 体验设计",
+  "no": 1,
+  "title": "概率性输出的体验设计",
+  "tags": [
+   "体验设计",
+   "流式输出",
+   "置信度",
+   "重新生成",
+   "引用",
+   "容错设计"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>AI 输出不确定、可能慢、可能错——体验设计的目标不是假装它确定，而是帮用户建立合理预期与纠正手段。六个标配组件：</p>\n<ul>\n<li><b>流式输出</b>：打字机效果缓解等待焦虑（长任务显示执行进度）。</li>\n<li><b>引用透明</b>：答案附来源，可点开核对，信任感翻倍。</li>\n<li><b>重新生成</b>：不满意一键重抽，成本远低于人工返工。</li>\n<li><b>置信度表达</b>：不确定时明说「此答案仅供参考」，别硬撑。</li>\n<li><b>人工接管</b>：关键节点永远留人工入口。</li>\n<li><b>反馈闭环</b>：点赞点踩 + 可选原因，喂养数据飞轮。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>原型必须画两条流程：主流程 + 兜底流程（答错/答不出/超时各去哪）。</li>\n<li>错误文案是产品的一部分：告诉用户「发生了什么、能怎么办」，而不是报错代码。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：流式、引用、重试、置信、接管、反馈——概率性体验六件套。</div>"
+ },
+ {
+  "id": "p8",
+  "domain": "product",
+  "mod": "B4 体验设计",
+  "no": 2,
+  "title": "Human-in-the-loop：人机协作设计",
+  "tags": [
+   "人机协作",
+   "hitl",
+   "人工审核",
+   "接管",
+   "协作流程",
+   "审核节点"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>Human-in-the-loop（人在回路）= 把人工判断嵌进 AI 工作流，而不是让 AI 全自动或人全手工。三种嵌入位置：</p>\n<ul>\n<li><b>事前</b>：人定目标与规则，AI 执行（人审提示词/模板）。</li>\n<li><b>事中</b>：高风险步骤暂停等人确认（发送、删除、对外发布）。</li>\n<li><b>事后</b>：AI 交付，人审核修改，修改数据回流优化（豆包工作「指哪改哪」模式）。</li>\n</ul>\n<h4>设计要点</h4>\n<ul>\n<li><b>按风险分级</b>：只读操作全自动、写操作可撤回、不可逆操作必须人确认——一刀切全审批会杀死自动化价值。</li>\n<li>人工纠正的产出必须回流：每次修改都是免费标注数据。</li>\n<li>给用户掌控感：过程可视、随时可停、权限可收。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>画人机协作泳道图：每个环节标清楚\"AI 做 / 人做 / 人确认\"。</li>\n<li>指标配套：人工接管率（越低说明自动化越成熟）、人工修改字数（越短越好）。</li>\n</ul>\n<div class=\"callout\">💡 面试锚点：「自动化程度与风险等级匹配」——这一句体现的是设计判断力。</div>"
+ },
+ {
+  "id": "p9",
+  "domain": "product",
+  "mod": "B5 评估体系",
+  "no": 1,
+  "title": "AI 功能的核心指标体系",
+  "tags": [
+   "指标",
+   "准确率",
+   "召回率",
+   "采纳率",
+   "幻觉率",
+   "人工接管率",
+   "数据指标"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>AI 功能的指标分三层：</p>\n<ul>\n<li><b>质量层</b>：准确率、召回率、幻觉率、格式合规率——模型答得对不对。</li>\n<li><b>体验层</b>：首字延迟、完整响应时间、重新生成率——用得顺不顺。</li>\n<li><b>价值层</b>：<b>采纳率</b>（用户真用了结果的比例）、<b>编辑率</b>（用前改了多少）、<b>人工接管率</b>、任务完成率、节省工时——到底有没有用。</li>\n</ul>\n<h4>为什么 AI PM 必须掌握</h4>\n<ul>\n<li>质量层证明\"能不能用\"，价值层证明\"值不值得用\"——<b>只汇报准确率的产品汇报是不完整的</b>。</li>\n<li>每个功能上线前必须写清：北极星指标 1 个 + 护栏指标（质量底线）若干。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>采纳率低先拆漏斗：没看到 / 看到不信 / 用了不满意，三段的解法完全不同。</li>\n<li>指标定义写进评估方案文档：公式 + 目标值 + 评测频率（学习计划 W15 的产出）。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：质量看准确，体验看延迟，价值看采纳——三层指标缺一不可。</div>"
+ },
+ {
+  "id": "p10",
+  "domain": "product",
+  "mod": "B5 评估体系",
+  "no": 2,
+  "title": "评估集设计与三种评估方法",
+  "tags": [
+   "golden set",
+   "评估集",
+   "人工评估",
+   "规则评估",
+   "llm judge",
+   "评测方法",
+   "测试集"
+  ],
+  "body": "<h4>概念本质</h4>\n<ul>\n<li><b>评估集（Golden Set）</b>：一组带标准答案/判定要点的测试问题，是 AI 功能的\"考卷\"。配比建议：高频题 60% + 边界题 25% + 对抗题 15%，50 条起步。</li>\n<li>三种评估手段按成本递增：<b>规则评估</b>（格式、字数、引用存在性，便宜可全量）→ <b>LLM-as-Judge</b>（用模型按评分标准打分，规模化但要先校准）→ <b>人工评估</b>（抽样打分定基准，最准但最贵）。</li>\n</ul>\n<h4>为什么 AI PM 必须掌握</h4>\n<ul>\n<li>评估集是 AI 产品最值钱的隐形资产：换模型、改提示词、调参数，全靠它量化对比。</li>\n<li>「每次迭代都有前后对比数据」是面试作品集的硬通货。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>坏案例必须回流进评估集——这是评估集进化的主要来源。</li>\n<li>LLM-as-Judge 上线前先抽 50 条与人工结果对一致性，低于 80% 就调评分标准。</li>\n<li>跑评测固定流程：冻结版本 → 批量执行 → 打分汇总 → 与基线对比 → 出报告。</li>\n</ul>\n<div class=\"callout\">💡 面试锚点：能讲清「评估集配比 + 三种方法各自适用场景 + 一次完整评测流程」，评估题基本满分。</div>"
+ },
+ {
+  "id": "p11",
+  "domain": "product",
+  "mod": "B6 商业与上线",
+  "no": 1,
+  "title": "成本建模：Token 经济学与敏感性分析",
+  "tags": [
+   "成本",
+   "定价",
+   "毛利",
+   "盈亏平衡",
+   "敏感性分析",
+   "单位经济",
+   "订阅"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>AI 功能的成本随用量线性增长，商业模式必须先算清单位经济：</p>\n<ul>\n<li><b>单次成本</b> = 平均输入 token × 输入单价 + 平均输出 token × 输出单价。</li>\n<li><b>月成本</b> = 单次成本 × 月调用次数（按用户数 × 人均频次拆）。</li>\n<li><b>敏感性分析</b>：调用量上下浮动 ±20%，看毛利与盈亏平衡点是否稳健。</li>\n</ul>\n<h4>降本杠杆（按优先级）</h4>\n<ul>\n<li>任务分级 + 模型路由（简单任务走轻量模型，如千问办公标准模式省 75% token）。</li>\n<li>结果缓存、提示词压缩、输出长度约束。</li>\n<li>定价侧：订阅（包月）/ 积分（限额）/ 按量（透明）三种模式适配不同用户心智。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>成本模型表格是立项评审的必交件（学习计划 W17）。</li>\n<li>免费额度要反推：每免费用户月成本 × 转化率假设 = 获客成本，算不过就调额度。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：先算单次，再算月度，最后 ±20% 压一遍——成本三连。</div>"
+ },
+ {
+  "id": "p12",
+  "domain": "product",
+  "mod": "B6 商业与上线",
+  "no": 2,
+  "title": "AI 功能的灰度发布与迭代策略",
+  "tags": [
+   "灰度",
+   "ab测试",
+   "上线",
+   "放量",
+   "迭代",
+   "版本管理",
+   "影子模式"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>AI 输出有不确定性，全量上线=全量赌博。标准打法：</p>\n<ul>\n<li><b>评估集达标</b> → <b>小范围灰度</b>（种子用户/低风险场景）→ <b>看真实数据</b>（采纳率、负反馈率）→ <b>逐步放量</b> → 全量。</li>\n<li><b>影子模式</b>：新模型/新提示词只跑不展示，与线上结果对比，零风险验证。</li>\n<li><b>A/B 测试注意</b>：AI 功能的 A/B 要固定模型版本与参数，否则无法归因；样本量要覆盖足够多的任务类型。</li>\n</ul>\n<h4>迭代节奏</h4>\n<ul>\n<li>提示词迭代：天级；评估集与语料优化：周级；模型升级/微调：月级以上。</li>\n<li>每次模型升级必须重跑全量评估集——新模型不是只变好，行为会整体漂移。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：评估达标才灰度，灰度看数据，放量有回滚。</div>"
+ },
+ {
+  "id": "p13",
+  "domain": "product",
+  "mod": "B7 风险与合规",
+  "no": 1,
+  "title": "AI 产品的风险、合规与兜底设计",
+  "tags": [
+   "风险",
+   "合规",
+   "内容安全",
+   "兜底",
+   "转人工",
+   "责任界定",
+   "隐私"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>AI 产品的风险治理四件套：</p>\n<ul>\n<li><b>内容安全</b>：输入过滤 + 输出审核，明确违禁类目与处置策略。</li>\n<li><b>幻觉责任界定</b>：免责声明、引用溯源、高风险场景强制人工复核——出了错，责任链清晰。</li>\n<li><b>隐私合规</b>：个人信息最小化采集、用途授权、可删除（个保法）；数据不出域要求。</li>\n<li><b>兜底方案</b>：答不出怎么办（转人工/给保守回答）、超时怎么办、模型挂了怎么办——写进文档并演练。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>风险登记表格式：场景 / 影响 / 概率 / 缓解措施 / 责任人，立项评审必过。</li>\n<li>转人工的触发条件要量化：连续 2 轮低置信、用户明确表达不满、触碰敏感类目。</li>\n<li>HR/金融/医疗等强合规场景，合规先于功能排期。</li>\n</ul>\n<div class=\"callout\">💡 面试锚点：「我不追求零风险，我追求风险可控、可见、可追责」——风险题的标准收尾。</div>"
+ },
+ {
+  "id": "h1",
+  "domain": "hr",
+  "mod": "C1 转型策略",
+  "no": 1,
+  "title": "HR → AI PM：能力映射与优势构建",
+  "tags": [
+   "转型",
+   "hr",
+   "ai pm",
+   "能力模型",
+   "优势",
+   "差异化",
+   "竞争力"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>HR 背景转型 AI PM 不是从零开始，而是把 HR 的三项核心能力<b>平移并升级</b>：</p>\n<ul>\n<li><b>业务理解力 → 场景洞察力</b>：你懂招聘、培训、测评、薪酬的全流程，知道痛点在哪——这是通用 PM 没有的行业语料。</li>\n<li><b>合规与伦理意识 → 风险治理力</b>：HR 天然熟悉个保法、公平就业等合规要求，这正是 AI 产品最缺的治理能力。</li>\n<li><b>沟通与组织协调 → 多方共情力</b>：HR 日常在业务、员工、法务、管理层之间周旋，转型做产品协调研发、算法、业务方同样有效。</li>\n</ul>\n<h4>转型路径建议</h4>\n<ul>\n<li>第一步：先做 AI+HR 方向的 PM（AI 招聘产品、企业培训助手、内部知识库），夯实用 AI 解决 HR 场景的能力。</li>\n<li>第二步：往通用 AI PM 扩展，把在 HR 场景积累的评估与迭代方法论迁移。</li>\n<li>作品集差异点：你的作品集天然自带行业场景，比「通用 AI 助手」更具体可信。</li>\n</ul>\n<div class=\"callout\">💡 面试锚点：「我懂 HR 场景，这是我做 AI+HR 产品不同于通用 PM 的起点」——把自己的背景变成答案。</div>"
+ },
+ {
+  "id": "h2",
+  "domain": "hr",
+  "mod": "C1 转型策略",
+  "no": 2,
+  "title": "AI+HR 场景全景图",
+  "tags": [
+   "场景",
+   "全景",
+   "招聘",
+   "培训",
+   "测评",
+   "留任",
+   "人力资源",
+   "规划"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>AI+HR 的落地场景按「招聘-培训-测评-留任」四象限展开：</p>\n<ul>\n<li><b>招聘</b>：简历初筛（AI 提候选，人做决策）、面试问答转写与结构化纪要、AI 面试官（数字人初面）、人岗匹配分析。</li>\n<li><b>培训</b>：内部政策知识问答 Bot、新员工上岗辅助、AI 导师（在岗问答）、培训内容自动生成。</li>\n<li><b>测评</b>：360 评估自动汇总分析、胜任力模型辅助构建、人才盘点数据看板。</li>\n<li><b>留任</b>：离职预测（基于行为数据，注意合规）、员工对话情绪分析、个性化发展建议。</li>\n</ul>\n<h4>落地优先级判断</h4>\n<p>按「价值 × 可行性 × 风险」三维：<b>内部知识问答优先</b>（高频刚需、数据在手、低风险）→ 简历初筛辅助（高频、需谨慎设计公平性）→ AI 面试/测评（高风险、需合规先行）。</p>\n<div class=\"callout\">💡 记忆锚点：招-培-测-留四象限，先做知识问答，再进辅助决策。</div>"
+ },
+ {
+  "id": "h3",
+  "domain": "hr",
+  "mod": "C2 产品设计案例",
+  "no": 1,
+  "title": "AI 简历筛选：产品设计与公平性",
+  "tags": [
+   "简历",
+   "筛选",
+   "公平",
+   "歧视",
+   "算法",
+   "辅助",
+   "智能招聘"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>AI 简历筛选不是「AI 自动淘汰候选人」，而是<b>人定标准、AI 辅助做初筛和排序</b>。产品定位必须是「决策辅助工具」而非「决策者」。</p>\n<h4>设计要点</h4>\n<ul>\n<li><b>定位</b>：AI 只做初筛（标注匹配度、提取关键信息），淘汰决策权在招聘方。</li>\n<li><b>公平性设计</b>：定期审计敏感特征相关性（性别、年龄、地域等），做偏差检测；拒绝使用敏感特征作为筛选条件。</li>\n<li><b>可解释性</b>：每条筛选结果附理由（匹配了哪些关键词、经验年限等），让用户能判断为什么不匹配。</li>\n<li><b>合规</b>：简历数据最小化采集、到期自动删除、候选人可查筛选结果。</li>\n</ul>\n<h4>指标设计</h4>\n<ul>\n<li>核心指标：初筛效率提升（人工筛选时间下降比例）、召回率（该看到的候选人 AI 没漏掉）、人工采纳率（HR 采纳 AI 初筛结果的比例）。</li>\n<li>护栏指标：敏感特征相关性、终面通过率对比（AI 推荐 vs 非推荐无显著差异才合格）。</li>\n</ul>\n<div class=\"callout\">💡 面试锚点：做 AI 招聘产品，开口先讲公平与合规，再讲效率——这是这行的政治正确，也是专业体现。</div>"
+ },
+ {
+  "id": "h4",
+  "domain": "hr",
+  "mod": "C2 产品设计案例",
+  "no": 2,
+  "title": "AI 面试产品：数字面试官设计要点",
+  "tags": [
+   "ai面试",
+   "数字人",
+   "面试",
+   "评价",
+   "口语",
+   "面试官",
+   "偏题"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>AI 面试产品一般定位为<b>初面环节</b>：数字人/语音助手按标准题库提问，实时转写并分析回答质量，输出结构化面试报告给人做决策参考。不是替代面试官，而是把面试官从重复性初面中解放出来。</p>\n<h4>设计要点</h4>\n<ul>\n<li><b>题库管理</b>：结构化题库（能力维度 + 问题 + 评分标准），HR 可自定义。</li>\n<li><b>转写与要素提取</b>：实时语音转文字 + 提取关键能力表现（沟通、逻辑、经验匹配度）。</li>\n<li><b>防作弊设计</b>：随机抽题、限时作答、异常行为检测（多次停留、替答风险）。</li>\n<li><b>候选人体验</b>：清晰说明 AI 面试目的、允许试答、提供反馈渠道。</li>\n<li><b>输出</b>：结构化面试报告（每道题的回答摘要 + 能力评分 + 综合建议），供真人面试官后续参考。</li>\n</ul>\n<h4>风险与边界</h4>\n<ul>\n<li>AI 面试不能做最终录用决策；明确告知候选人正在使用 AI 面试并获取同意。</li>\n<li>面试数据留存期限与用途需透明。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：标准化题库 + 结构化输出 + 人做最终决策——AI 面试的三根支柱。</div>"
+ },
+ {
+  "id": "h5",
+  "domain": "hr",
+  "mod": "C2 产品设计案例",
+  "no": 3,
+  "title": "内部政策知识问答机器人：HR 场景的 RAG 最佳实践",
+  "tags": [
+   "知识问答",
+   "rag",
+   "hr",
+   "政策",
+   "员工手册",
+   "入职",
+   "制度"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>「年假怎么休」「公积金怎么提取」「报销流程是什么」——这些高频问题靠 HR 人工回答效率低，靠 RAG 技术基于企业制度文档做问答，是 HR 场景落地 AI 的<b>最佳起点</b>：数据在手（政策文档完整）、非决策类（风险低）、高频刚需。</p>\n<h4>设计要点</h4>\n<ul>\n<li><b>知识库建设</b>：收集并整理制度文档（员工手册、薪酬福利、考核制度等），按主题切分，标注版本号与生效日期。</li>\n<li><b>检索增强</b>：用户问题先检索最相关的制度条款，再生成回答；<b>必须附引用来源</b>（第几条、第几页）。</li>\n<li><b>时效</b>：制度更新时自动刷新知识库，旧版本存档。</li>\n<li><b>兜底</b>：不确定或无法回答时，引导用户找 HR 人工客服（附联系方式）。</li>\n</ul>\n<h4>指标</h4>\n<ul>\n<li>采纳率（HR 验证答案正确的比例）、一次性解决率（用户问完不追问的比例）、人工转接率。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：RAG + 制度文档 + 引用来源 + 转人工兜底，你做作品集的首选场景。</div>"
+ },
+ {
+  "id": "h6",
+  "domain": "hr",
+  "mod": "C2 产品设计案例",
+  "no": 4,
+  "title": "人才数据分析与盘点辅助",
+  "tags": [
+   "人才盘点",
+   "数据分析",
+   "组织",
+   "人才",
+   "360",
+   "数据可视化"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>人才盘点（Talent Review）是 HR 的核心场景，大量数据（绩效、360 评估、测评、晋升记录）需要整合分析。AI 在此场景的定位是<b>「数据整合 + 分析辅助」</b>，而非自动下结论。</p>\n<h4>设计要点</h4>\n<ul>\n<li><b>数据整合</b>：AI 自动拉取多系统数据（绩效系统、测评系统、学习平台），生成统一人才画像。</li>\n<li><b>分析辅助</b>：自动汇总 360 评估的关键词（提到最多的能力项、发展建议）、绩效趋势分析（近三年趋势可视化）。</li>\n<li><b>九宫格辅助</b>：根据预设规则建议人才落位（高潜高绩效 → 发展、中潜中绩效 → 稳定），但最终落位留给人。</li>\n<li><b>隐私保护</b>：分析结果只对授权管理者可见，原始数据严格权限控制。</li>\n</ul>\n<h4>差异化价值</h4>\n<p>这类产品的壁垒不在于 AI 模型，而在于<b>对 HR 场景的理解</b>（知道什么指标该看、什么结论该慎下）——这正是你作为 HR 背景 PM 的护城河。</p>\n<div class=\"callout\">💡 记忆锚点：AI 做数据整合与可视化，人做判断与决策。</div>"
+ },
+ {
+  "id": "h7",
+  "domain": "hr",
+  "mod": "C3 落地保障",
+  "no": 1,
+  "title": "HR 数据合规与算法公平",
+  "tags": [
+   "合规",
+   "个保法",
+   "公平",
+   "歧视",
+   "隐私",
+   "数据保护",
+   "算法审计"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>HR 领域的 AI 产品面临最严格的合规约束——涉及人的录用、评价、升迁，一旦出错影响大且不可逆。核心合规框架：</p>\n<ul>\n<li><b>个人信息保护法（个保法）</b>：最小化采集、告知用途与有效期、可删除。</li>\n<li><b>算法公平性</b>：性别、年龄、地域、民族等敏感特征不得作为筛选依据；定期做偏差检测（AI 推荐结果是否与某特征显著相关）。</li>\n<li><b>可解释权</b>：候选人/员工有权利要求 AI 决策的解释（为什么没通过筛选、为什么被打低分）。</li>\n<li><b>人工审核权</b>：AI 只做辅助，人的终审权不可替代。</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>产品设计阶段就嵌入合规：数据采集页的授权文案、AI 输出的「仅供参考」声明、年度偏差审计报告。</li>\n<li>所有 HR 类 AI 产品必须做「合规自查表」：数据来源、用途、保留期限、删除机制、申诉渠道、偏差检测频次。</li>\n</ul>\n<div class=\"callout\">💡 面试锚点：讲 AI+HR 产品，合规与公平是第一位的，效率是第二位的——顺序错了就是外行。</div>"
+ },
+ {
+  "id": "h8",
+  "domain": "hr",
+  "mod": "C3 落地保障",
+  "no": 2,
+  "title": "HR 团队引入 AI 的落地路径",
+  "tags": [
+   "落地",
+   "实施",
+   "变革",
+   "推广",
+   "pilot",
+   "培训",
+   "员工接受度"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>HR 团队引入 AI 的障碍不是技术，而是<b>信任、流程与变革管理</b>。作为 PM，你的工作不止于产品本身，还包括推动落地。</p>\n<h4>四步落地路径</h4>\n<ul>\n<li><b>① 选场景试点</b>：选一个低风险高频场景（内部知识问答 / 简历初筛），小范围试点，2-4 周出数据。</li>\n<li><b>② 建立信任</b>：透明公开——让员工知道 AI 做了什么、没做什么、数据怎么用；试点期间人工兜底，确保业务不中断。</li>\n<li><b>③ 量化效果</b>：用数据说话（效率提升、满意度变化、错误率对比），让管理者看到具体 ROI。</li>\n<li><b>④ 逐步推广</b>：从试点到全员，从单场景到多场景，每步都有评估与调整期。</li>\n</ul>\n<h4>常见阻力与对策</h4>\n<ul>\n<li>HR 团队担心被替代 → 讲清楚「AI 做初筛，你做决策，你的价值在判断力上」。</li>\n<li>员工担心隐私 → 提前发布数据使用说明，给拒绝权。</li>\n<li>管理层担心合规 → 合规自查表 + 法务签字，上会前已过合规关。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：选场景 → 建信任 → 量化 → 推广，四步走，每一步都留后退通道。</div>"
+ },
+ {
+  "id": "i1",
+  "domain": "interview",
+  "mod": "D1 表达框架",
+  "no": 1,
+  "title": "STAR 法则与量化项目叙述",
+  "tags": [
+   "star",
+   "面试",
+   "项目",
+   "量化",
+   "表达",
+   "结构",
+   "叙述"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>STAR 是面试叙述的黄金结构：</p>\n<ul>\n<li><b>S（情境）</b>：什么背景、什么痛点——30 秒说清。</li>\n<li><b>T（任务）</b>：你要解决什么问题、目标是什么。</li>\n<li><b>A（行动）</b>：你具体做了什么——这是核心，讲清楚你的判断、决策、执行，不要只说\"我们做了个 AI 功能\"。</li>\n<li><b>R（结果）</b>：必须量化（准确率从 72% 提升到 89%、采纳率 65%、接替率降低 30%），没数据 = 没做过。</li>\n</ul>\n<h4>AI PM 版 STAR 特别要求</h4>\n<ul>\n<li>行动部分必须包含：<b>评估方法</b>（怎么知道效果好不好）、<b>迭代过程</b>（改了几版）、<b>你的角色</b>（具体决策了什么）。</li>\n<li>结果部分优先报价值层指标（采纳率、节省工时、人工接管率），而非质量层（准确率、召回率）。</li>\n</ul>\n<h4>准备方法</h4>\n<ul>\n<li>每个项目准备 1 分钟版和 3 分钟版；1 分钟抓 S+T+R，3 分钟展开 A。</li>\n<li>准备 3 个数字：最好的数字、最差但学到了的数字、最想展示的数字。</li>\n</ul>\n<div class=\"callout\">💡 STAR 的杀手锏：行动部分每次说完都问自己「我的判断是什么」，而不是「我们做了什么」。</div>"
+ },
+ {
+  "id": "i2",
+  "domain": "interview",
+  "mod": "D1 表达框架",
+  "no": 2,
+  "title": "AI PM 高频面试题地图与应对策略",
+  "tags": [
+   "面试题",
+   "高频",
+   "分类",
+   "应对",
+   "策略",
+   "技术类",
+   "场景类",
+   "复盘类"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>AI PM 面试题分四类，每类对应的考核点不同：</p>\n<ul>\n<li><b>① 技术理解类</b>：\"RAG 是什么\"\"幻觉怎么解决\"——考察是否真懂，不是背概念。答法：概念 + 为什么 PM 要懂 + 具体决策案例。</li>\n<li><b>② 产品设计类</b>：\"设计一个 AI 客服/会议纪要产品\"——考察系统设计能力。答法：四步框架（见 D2 模块）。</li>\n<li><b>③ 项目复盘类</b>：\"介绍一个你做的项目\"\"失败案例\"——考察真实参与度与复盘能力。答法：STAR + 量化 + 学到了什么。</li>\n<li><b>④ 场景判断类</b>：\"这个场景适不适合做 AI\"\"选 RAG 还是微调\"——考察决策框架。答法：给出框架（三维评分/决策树）再给结论。</li>\n</ul>\n<h4>准备策略</h4>\n<ul>\n<li>每类准备 2 个标准答案：技术类准备 RAG 和幻觉两个标准答案；产品类准备知识问答和会议纪要两个系统设计。</li>\n<li>追问是真正的分水岭：每个答案后追问自己 3 个\"然后呢\"，直到答不出。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：技术讲决策、设计讲框架、复盘讲量化、判断讲方法论——四类题四个套路。</div>"
+ },
+ {
+  "id": "i3",
+  "domain": "interview",
+  "mod": "D1 表达框架",
+  "no": 3,
+  "title": "追问应对：不会、被压、遇到真问题",
+  "tags": [
+   "追问",
+   "压力",
+   "不会",
+   "应对",
+   "面试技巧",
+   "压力面",
+   "诚实"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>面试官追问不一定是要正确答案，而是要看你<b>在压力下的思考过程</b>。</p>\n<h4>三种典型场景</h4>\n<ul>\n<li><b>被问到不会的技术细节</b>：诚实说\"这个我不确定，但我的理解是……\" + 给出框架性判断（如\"技术细节我不掌握，但从产品角度我会这样判断……\"）。切忌编造。</li>\n<li><b>被持续追问压力测试</b>：保持冷静，反问确认（\"你指的是哪个方面？\"）给自己争取思考时间；接受不确定性（\"如果数据不支撑，我会调整假设重新推演\"）。</li>\n<li><b>遇到真实业务难题</b>：展示结构化思考——先拆解问题（\"这是两个问题叠加：一是……二是……\"），再给框架性回答（\"我会先确定……然后用……方法验证\"）。</li>\n</ul>\n<h4>实用技巧</h4>\n<ul>\n<li>追问答不上来时，可以说：「这个问题我没有足够的信息给出准确判断，但从产品角度我会这样推演……」——这是把场面拉回可控区的标准话术。</li>\n<li>追问环节的加分项是做总结收尾：「综上，我的核心判断是……」。不管前面答得怎么样，一个有结论的收尾能挽回印象分。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：不会就说不会，但给框架；压力大就停下来，反问再思考；收尾必须有结论。</div>"
+ },
+ {
+  "id": "i4",
+  "domain": "interview",
+  "mod": "D2 答题精要",
+  "no": 1,
+  "title": "技术理解题的标准答案框架",
+  "tags": [
+   "技术题",
+   "rag",
+   "微调",
+   "幻觉",
+   "标准答案",
+   "框架",
+   "方法"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>技术理解题的标准公式：<b>概念一句话 + 为什么 PM 要懂 + 决策判断 + 面试官追问准备</b>。</p>\n<h4>三个高频题的标准答案</h4>\n<p><b>① RAG 是什么</b>：检索增强生成，先查资料再回答，解决模型不知道私有知识/信息过时/需要引用溯源的问题。选它是因为成本比微调低、知识可更新、可溯源。PM 关注的是切分策略和检索召回质量，这是效果瓶颈。</p>\n<p><b>② 三个路线怎么选</b>：先用 Prompt 试（成本最低），再上 RAG（需要知识/引用时），最后才考虑微调（需改变行为且数据充足）。判断标准：知识更新频率、是否需引用、成本预算。</p>\n<p><b>③ 幻觉怎么解决</b>：无法根除，但产品可管理。四层——接检索、降自由度、后置校验、体验兜底。这一句直接说就能过第一关。</p>\n<h4>追问准备</h4>\n<p>每个答案后预想 2 个追问：RAG 被问「如果召回质量差怎么办」→ 答「先看是切分问题还是检索问题，用 bad case 建评估集定位」；幻觉被问「具体怎么落地」→ 答「先做引用来源，再做低温度，再建规则校验关键字段，最后加人工确认入口」。</p>\n<div class=\"callout\">💡 记忆锚点：概念 + 决策 + 实践 = 技术题满分回答。</div>"
+ },
+ {
+  "id": "i5",
+  "domain": "interview",
+  "mod": "D2 答题精要",
+  "no": 2,
+  "title": "系统设计题的四步框架",
+  "tags": [
+   "系统设计",
+   "产品设计",
+   "面试题",
+   "框架",
+   "方案",
+   "设计"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>系统设计题如「设计一个 AI 客服/会议纪要/知识问答产品」，不是在真空中设计，而是展示<b>结构化思考过程</b>。四步框架：</p>\n<ul>\n<li><b>① 界定范围</b>：目标用户是谁？核心场景是什么？不做的不做比做了什么更重要。</li>\n<li><b>② 方案设计</b>：用户交互流程（画主流程 + 兜底流程）+ 技术方案（选什么路线、为什么）+ 数据方案（数据从哪来）。</li>\n<li><b>③ 评估体系</b>：怎么知道好不好——核心指标 1 个 + 护栏指标若干 + 评估方法。</li>\n<li><b>④ 风险与兜底</b>：最大的风险是什么？出错了怎么办？合规怎么过？</li>\n</ul>\n<h4>实践要点</h4>\n<ul>\n<li>面试官最看重的是①和④：能不能把范围定清楚、能不能识别风险——这两步决定了你的经验层级。</li>\n<li>每一层都要有取舍判断：为什么选这个方案不选那个，体现决策能力。</li>\n<li>时间分配建议：① 20% ② 40% ③ 20% ④ 20%。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：范围→方案→评估→风险，四步走完就是一个完整的系统设计。</div>"
+ },
+ {
+  "id": "i6",
+  "domain": "interview",
+  "mod": "D2 答题精要",
+  "no": 3,
+  "title": "作品集打包：STAR + 量化 + 复盘",
+  "tags": [
+   "作品集",
+   "项目",
+   "回顾",
+   "复盘",
+   "star",
+   "量化",
+   "展示"
+  ],
+  "body": "<h4>概念本质</h4>\n<p>面试中展示项目不只是\"讲一个故事\"，而是<b>用产品方法论重新包装你的工作</b>。每个作品集项目应包含：</p>\n<ul>\n<li><b>项目背景</b>：什么场景、什么痛点、为什么选 AI 方案。</li>\n<li><b>你的角色</b>：你具体做了什么决策（需求判断、评估设计、风险识别、推进落地），而不是\"我们团队做了什么\"。</li>\n<li><b>核心数据</b>：用前后对比展示效果（上线前 vs 上线后、迭代前 vs 迭代后）。</li>\n<li><b>复盘反思</b>：最大的坑是什么、学到了什么、如果重来会怎么做——这是面试官最看重的部分，展示成长型思维。</li>\n</ul>\n<h4>作品集包装技巧</h4>\n<ul>\n<li>每个项目准备 3 个数字：最好的（证明能力）、最差的（证明诚意与复盘）、最想被问的（引导面试）。</li>\n<li>AI 项目必须展示评估思维：你怎么知道效果好的、走过哪些弯路、现在怎么测的。</li>\n<li>如果项目没有量化数据——优先做补充评估（回测 / 采样人工评估），比空着强。</li>\n</ul>\n<div class=\"callout\">💡 记忆锚点：没数据的项目≈没做过；有数据但没复盘，就是个执行者。</div>"
+ }
+];
+
+/* ---------- 知识网络关系（前置/关联/后继） ---------- */
+const KB_REL = {
+  b1:{n:["b2","b3"],r:["b4"]}, b2:{n:["b4"],r:["b3"]}, b3:{n:["b4"],r:["b2"]},
+  b4:{n:["b5","b6"],r:["b1","b2","b3"]}, b5:{n:["b7"],r:["b6"]}, b6:{n:["b7"],r:["b5"]},
+  b7:{n:["b8"],r:[]}, b8:{n:["b9"],r:["b7","p5"]}, b9:{n:["b10","b11"],r:["b8"]},
+  b10:{n:["b12"],r:["b9"]}, b11:{n:["b12"],r:["b9"]},
+  b12:{n:["b13"],r:["b5"]}, b13:{n:["p1","p9"],r:["b12"]},
+  p1:{n:["p2","p3"],r:["b13"]}, p2:{n:["p11"],r:["p1"]},
+  p3:{n:["p4","p5"],r:["p1"]}, p4:{n:["p5"],r:["p3"]},
+  p5:{n:["p6","p7"],r:["p4","b8"]}, p6:{n:["p11"],r:["p5"]},
+  p7:{n:["p8","p9"],r:["p5"]}, p8:{n:["p13"],r:["p7"]},
+  p9:{n:["p10"],r:["p7","b13"]}, p10:{n:[],r:["p9"]},
+  p11:{n:["p12"],r:["p2","p6"]}, p12:{n:[],r:["p11"]}, p13:{n:["h1"],r:["p8"]},
+  h1:{n:["h2","h3"],r:["p1"]}, h2:{n:["h3"],r:["h1"]},
+  h3:{n:["h4","h5"],r:["h1","h7"]}, h4:{n:["h6"],r:["h3"]},
+  h5:{n:["h6"],r:["h3","b8"]}, h6:{n:["h7"],r:["h4","h5"]},
+  h7:{n:["h8"],r:["h3"]}, h8:{n:[],r:["h7"]},
+  i1:{n:["i2","i3"],r:["b13","p9"]}, i2:{n:["i4"],r:["i1"]},
+  i3:{n:["i4"],r:["i1"]}, i4:{n:["i5"],r:["i2","b5","b8","b12"]},
+  i5:{n:["i6"],r:["i4"]}, i6:{n:[],r:["i1"]}
+};
+
+/* ---------- 刷题题库 ---------- */
+const QUIZ = [
+/* 大模型基础 */
+{domain:"base",type:"single",q:"一个产品要统计调用成本，最应该先搞清楚的是？",
+opts:["模型的品牌和知名度","每次调用平均的输入/输出 Token 数","训练用了多少张 GPU","模型的参数量大小"],ans:1,
+exp:"API 按 Token 计费，成本模型的核心是「平均输入 + 输出 Token × 单价」。参数/品牌与单次调用成本无关。"},
+{domain:"base",type:"single",q:"做「合同关键信息抽取」这类要求稳定准确的任务，Temperature 应该？",
+opts:["调高，让结果更有创意","调低，让输出更稳定确定","随便，没影响","调到最大再抽卡"],ans:1,
+exp:"抽取/分类/判断等确定性任务用低温度；文案创意类才用高温度。记忆：判断低温、创意高温。"},
+{domain:"base",type:"single",q:"RAG 链路中，「把用户问题转成向量去匹配相似内容」属于哪一步？",
+opts:["文档切分","向量检索","重排","生成引用"],ans:1,
+exp:"Embedding 把问题和文档都变成向量，向量检索负责找出最相似的片段，再进入重排与生成。"},
+{domain:"base",type:"single",q:"知识库问答总是「答非所问」，最优先排查的环节是？",
+opts:["换个更贵的模型","检查切分策略与检索召回质量","把温度调到 2","让用户重新提问"],ans:1,
+exp:"答非所问多数是切分太碎/太大或召回不准，而非模型能力问题。先定位检索环节。"},
+{domain:"base",type:"single",q:"下列关于「幻觉」的说法，最专业的是？",
+opts:["换个大模型就能彻底解决","幻觉无法根除，要设计成可发现、可纠正、可追责","提高温度就不会幻觉","只要提示词写得好就不会出现"],ans:1,
+exp:"幻觉源于模型「预测最像人话的词」而非「保证事实」。正确姿态是降自由度+接检索+后置校验+体验兜底。"},
+{domain:"base",type:"multi",q:"以下哪些属于降低幻觉风险的有效手段？（多选）",
+opts:["接入 RAG 并要求引用来源","事实任务使用低温度/结构化输出","关键字段用规则或第二模型校验","把温度调到最高增加多样性"],ans:[0,1,2],
+exp:"前三项都能约束输出、提高可核验性。D 会放大随机性，反而加重幻觉。"},
+{domain:"base",type:"judge",q:"判断：给模型做微调，就能让它学会并随时更新你公司的最新业务数据。",opts:["正确","错误"],ans:1,
+exp:"错误。微调改变的是行为/风格，且不随新数据自动更新；知识更新要靠 RAG 检索最新资料。"},
+
+/* AI产品设计 */
+{domain:"product",type:"single",q:"判断一个场景适不适合做 AI，最完整的框架是？",
+opts:["看老板喜不喜欢","价值 × 可行性 × 风险 三维评估","看竞品有没有做","看技术团队想不想做"],ans:1,
+exp:"价值（解决多大痛点）×可行性（能力/数据/成本够不够）×风险（出错代价与合规），三者共同决定该不该做。"},
+{domain:"product",type:"single",q:"AI 产品与传统产品最大的差异，PM 必须新增的能力是？",
+opts:["会画原型","评估思维：用量化指标衡量概率性输出","会开需求评审","会写周报"],ans:1,
+exp:"AI 输出是概率性的，不能靠『感觉还行』，评估体系设计是 AI PM 区别于传统 PM 的新基本功。"},
+{domain:"product",type:"single",q:"用户对 AI 生成结果点击「重新生成」属于哪种体验设计？",
+opts:["无关紧要的装饰","应对概率性输出的不确定性设计","性能优化","埋点统计"],ans:1,
+exp:"重新生成、置信度展示、人工接管、反馈闭环，都是针对『输出不确定』的专门体验设计。"},
+{domain:"product",type:"single",q:"成本敏感性分析中，调用量上下浮动 20% 主要是为了？",
+opts:["让表格看起来更专业","检验商业模式在波动下的稳健性/盈亏平衡","给财务找事","没有实际意义"],ans:1,
+exp:"调用量是成本的核心变量，做 ±20% 敏感性分析能判断毛利与盈亏平衡点是否稳健。"},
+{domain:"product",type:"multi",q:"设计 human-in-the-loop（人机协作）时，应该包含哪些？（多选）",
+opts:["关键/高风险步骤需人工确认","提供转人工的清晰入口","记录人工纠正用于回流优化","所有步骤都强制人工审批，一个不放过"],ans:[0,1,2],
+exp:"ABC 都是合理的人机协作设计；D 会让自动化失去意义，应按风险分级而非一刀切。"},
+{domain:"product",type:"judge",q:"判断：AI 功能上线前，只要内部体验『挺顺的』就可以直接全量发布。",opts:["正确","错误"],ans:1,
+exp:"错误。需要评估集达标 + 灰度/AB 验证真实效果，再逐步放量，避免概率性输出在全量下翻车。"},
+
+/* 面试实战 */
+{domain:"interview",type:"single",q:"回答「介绍一个你做过的 AI 项目」，最推荐的结构是？",
+opts:["想到哪说到哪","STAR：情境-任务-行动-结果，且结果量化","只讲技术细节","只讲用了什么工具"],ans:1,
+exp:"STAR 结构清晰，且结果必须量化（准确率、采纳率、耗时下降等），这是面试官最关心的证据。"},
+{domain:"interview",type:"single",q:"被追问「你为什么选 RAG 而不是微调」，最佳回答方式是？",
+opts:["因为 RAG 比较火","给出场景判断 + 成本/迭代/知识更新的对比论证","因为我不会微调","随便编一个理由"],ans:1,
+exp:"展示决策过程：知识需实时更新→选 RAG；要引用溯源→RAG；成本迭代更低。体现的是方法论。"},
+{domain:"interview",type:"single",q:"面试官问「模型出现幻觉你怎么办」，最忌讳的回答是？",
+opts:["给出分层对策：检索/约束/校验/兜底","承认无法根除并讲产品设计","说『我们的模型不会有幻觉』","举一个真实排查案例"],ans:2,
+exp:"声称不会有幻觉 = 不懂行。正确姿态是承认客观存在，再讲如何让它可发现、可纠正、可追责。"},
+{domain:"interview",type:"judge",q:"判断：面试时作品项目没有量化数据，也可以靠『感觉体验很好』说服面试官。",opts:["正确","错误"],ans:1,
+exp:"错误。没有量化数据的项目 ≈ 没做过。评估数据是 AI PM 面试的核心证据。"},
+
+/* AI+HR */
+{domain:"hr",type:"single",q:"HR 背景转型 AI 产品经理，最应该放大的差异化优势是？",
+opts:["比别人更会用 Excel","对人才场景、组织流程与合规边界的深刻理解","会安排面试日程","熟悉考勤系统"],ans:1,
+exp:"HR 的场景洞察（招聘/培训/测评/合规）是通用 PM 不具备的，应作为 AI+HR 产品的护城河。"},
+{domain:"hr",type:"single",q:"设计「AI 简历初筛」产品，首要考虑的风险是？",
+opts:["界面好不好看","公平性/歧视与个人信息保护合规","简历模板颜色","页面加载速度"],ans:1,
+exp:"招聘决策属高风险场景，必须优先处理算法公平、可解释与个人信息保护（如个保法）合规。"},
+{domain:"hr",type:"single",q:"「内部政策知识问答机器人」最适合优先采用哪种技术方案？",
+opts:["直接让通用模型凭记忆回答","基于企业制度文档的 RAG 知识问答","大规模微调一个新模型","让员工自己翻手册"],ans:1,
+exp:"制度会更新、需可溯源，RAG 检索最新文档生成回答并附引用，是成本与效果的最优解。"},
+{domain:"hr",type:"multi",q:"以下哪些是 HR 场景中价值较高的 AI 落地机会？（多选）",
+opts:["面试问答自动转写与结构化纪要","员工培训知识问答助手","人才盘点数据辅助分析","用 AI 完全替代所有 HR 决策不留人工"],ans:[0,1,2],
+exp:"ABC 都是高频、可落地、人机协作的场景；D 忽视责任与合规，属于不可取的激进方案。"}
+];
+
+/* ---------- 面试模拟题库 ---------- */
+const INTERVIEW = [
+{domain:"base",cat:"技术理解",q:"请在 2 分钟内，向一位完全不懂技术的业务负责人讲清楚什么是 RAG、为什么我们的知识问答要用它。",
+intent:"考察能否把技术翻译成业务价值，是否真正理解链路。",
+ref:"① 类比：RAG 像给模型配了一个『可实时查阅的公司资料库』，答前先查资料。<br>② 痛点：模型不知道我们的私有知识、信息会过时。<br>③ 价值：答案更新鲜、可附来源引用、出错可追溯。<br>④ 边界：资料质量决定答案质量，所以要一起维护知识库。",
+check:["用了贴切的类比，非技术人员能听懂","点出私有知识/信息过时两大痛点","强调可引用、可追溯的业务价值","提到资料质量这个前提，显得严谨"]},
+{domain:"base",cat:"技术理解",q:"面试官追问：用户反馈问答机器人『答非所问』，你会从哪几个环节排查？",
+intent:"考察是否掌握 RAG 全链路、能否系统性归因。",
+ref:"① 先看问题：用户问法是否歧义/缺少关键词。<br>② 再看切分：块切得太大混入噪声，或太小丢失语义。<br>③ 再看检索：召回的片段相关性够不够，可加重排。<br>④ 最后看生成：提示词是否约束模型只用给定资料。<br>⑤ 方法：拿这批 bad case 建评估集，逐环节定位。",
+check:["覆盖切分/检索/生成多个环节","提到把 bad case 沉淀成评估集","有从现象到归因的排查顺序","不是一上来就怪模型"]},
+{domain:"product",cat:"产品设计",q:"请设计一个『AI 会议纪要自动生成』功能，说清目标用户、核心场景、关键指标和主要风险。",
+intent:"考察需求定义、指标设计与风险意识的完整性。",
+ref:"① 用户/场景：高频开会的团队，会后要整理纪要并分发待办。<br>② 方案：转写→区分发言人→提炼结论/待办/负责人→一键分发。<br>③ 指标：采纳率、编辑率、人工修改字数、待办提取准确率。<br>④ 风险：敏感信息合规、纪要出错的责任、隐私授权。<br>⑤ 兜底：可编辑、可撤回、敏感会议可关闭。",
+check:["目标用户和场景具体","指标可量化且贴合场景","识别了隐私/合规风险","有兜底与人工可控设计"]},
+{domain:"product",cat:"产品设计",q:"你负责的 AI 功能上线后，采纳率一直很低。你会怎么分析和优化？",
+intent:"考察数据驱动的诊断能力和迭代方法论。",
+ref:"① 拆问题：采纳率低是『没被看到』『看到了不信任』还是『用了不满意』。<br>② 看数据：曝光→使用→留存漏斗，定位流失环节。<br>③ 定性补充：访谈/看 bad case，判断是质量差、时机不对还是呈现不清。<br>④ 假设+AB：提出优化假设做 AB 验证，别拍脑袋。<br>⑤ 闭环：把负反馈回流进评估集，持续迭代。",
+check:["把采纳率做了漏斗拆解","定量+定性结合","用 AB 实验验证假设","提到负反馈回流"]},
+{domain:"product",cat:"产品设计",q:"老板要求一个月上线一个 AI 能力，但评估显示效果还不达标。你如何沟通和决策？",
+intent:"考察权衡、向上沟通与风险把控。",
+ref:"① 摆事实：用评估数据说明当前效果与达标差距。<br>② 给选项：a)按期上但缩小范围/加人工兜底 b)延期到达标 c)先灰度小范围试。<br>③ 讲风险：不达标的后果（体验、信任、返工成本）。<br>④ 给出推荐并说明理由，让老板做有依据的选择，而不是硬扛或盲从。",
+check:["用数据而不是情绪沟通","给出多个可选项","量化了不达标的风险","有明确推荐和理由"]},
+{domain:"interview",cat:"项目与复盘",q:"请介绍一个你做过的（或最能代表的）AI 项目，用 STAR 结构，结果必须量化。",
+intent:"考察表达结构、真实参与度与量化能力。",
+ref:"按 STAR：情境(背景痛点)→任务(你的目标)→行动(你具体做了什么，含评估/迭代)→结果(量化指标)。<br>准备 1-2 个可深挖的数字：准确率提升、耗时下降、采纳率、成本节省。并能回答『你个人贡献是什么』。",
+check:["结构清晰（STAR）","结果有具体量化数字","能说清个人贡献","经得起追问细节"]},
+{domain:"interview",cat:"项目与复盘",q:"说一个你在项目中遇到的失败或踩坑经历，你从中学到了什么？",
+intent:"考察复盘能力、诚实度与成长型思维。",
+ref:"① 简述失败（真实、具体，别编完美故事）。<br>② 归因：是需求误判/评估缺失/沟通问题/技术选型。<br>③ 学到：提炼成可复用的方法论。<br>④ 佐证：之后如何用这个教训避免了类似问题。",
+check:["失败真实可信","归因到方法论而非甩锅","提炼了可复用教训","有『之后如何应用』的闭环"]},
+{domain:"hr",cat:"AI+HR 场景",q:"结合你的 HR 背景，你认为哪个 HR 场景最适合先做 AI？为什么？",
+intent:"考察场景判断框架与自身优势结合。",
+ref:"用 价值×可行性×风险 框架选场景。例：『内部制度知识问答』——高频刚需(价值高)、有现成制度文档(数据可得)、非决策类(风险低)，适合先落地建信任；而简历筛选因公平性/合规风险高，应在能力验证后再进入。",
+check:["用了场景评估框架","结合了自己的 HR 洞察","考虑了风险与落地顺序","能说出为什么不是另一个场景"]},
+{domain:"hr",cat:"AI+HR 场景",q:"如果让你负责『AI 简历初筛』产品，你会如何处理公平性与合规问题？",
+intent:"考察高风险场景的责任意识与具体做法。",
+ref:"① 定位：AI 只做辅助初筛，不做淘汰决策，人工保留最终权。<br>② 公平：审计特征，避免性别/年龄等敏感变量造成歧视，定期做偏差检测。<br>③ 合规：遵循个保法，最小化采集、明确授权、可删除。<br>④ 可解释：对筛选逻辑留痕、可说明。<br>⑤ 体验：给候选人透明的反馈渠道。",
+check:["明确 AI 辅助、人工兜底","提到敏感特征与偏差检测","引用了个人信息保护合规","强调可解释与留痕"]}
+];
+
+/* ---------- 教练知识索引（用于对话匹配） ---------- */
+const TOPIC_HINTS = [
+"什么是 RAG","Prompt 和微调怎么选","怎么降低幻觉","如何做好模型评估","什么是 Agent",
+"怎么判断一个场景适不适合做 AI","AI 产品的指标怎么定","面试怎么自我介绍项目","HR 转 AI 的优势","AI 简历筛选的合规风险"
+];
+
+/* ---------- 状态与存储 ---------- */
+const LS_KEY="aipm_coach_v1";
+function defaultState(){return{points:0,streak:0,lastVisit:"",quiz:{done:{},right:0,total:0},
+kbRead:{},iv:{},ivChecks:{},checkin:{last:"",streak:0,total:0,history:[]},byDomain:{base:{r:0,t:0},product:{r:0,t:0},interview:{r:0,t:0},hr:{r:0,t:0},trend:{r:0,t:0}}};}
+let S=loadState();
+function loadState(){try{const d=JSON.parse(localStorage.getItem(LS_KEY));
+const st=(d&&d.points!==undefined)?d:defaultState();
+/* 兼容旧存档：补齐新领域键位 */
+st.byDomain=st.byDomain||{};Object.keys(DOMAINS).forEach(k=>{st.byDomain[k]=st.byDomain[k]||{r:0,t:0};});
+st.checkin=st.checkin||{last:"",streak:0,total:0,history:[]};
+  st.checkin.history=st.checkin.history||[];
+  /* 迁移旧数据：把 last 签到日期补进 history */
+  if(st.checkin.last&&!st.checkin.history.includes(st.checkin.last)){
+    st.checkin.history.push(st.checkin.last);
+  }
+return st;}catch(e){return defaultState();}}
+function saveState(){localStorage.setItem(LS_KEY,JSON.stringify(S));renderLevel();}
+
+/* ---------- 段位 ---------- */
+const LEVELS=[[0,"LV.1 见习PM"],[500,"LV.2 进阶PM"],[1500,"LV.3 资深PM"],[3000,"LV.4 AI产品专家"],[6000,"LV.5 首席AI产品官"]];
+function curLevel(){let li=0;for(let i=0;i<LEVELS.length;i++)if(S.points>=LEVELS[i][0])li=i;return li;}
+function renderLevel(){const li=curLevel();document.getElementById("levelName").textContent=LEVELS[li][1];
+const cur=LEVELS[li][0],next=li<LEVELS.length-1?LEVELS[li+1][0]:null;
+const pct=next?Math.min(100,((S.points-cur)/(next-cur))*100):100;
+document.getElementById("xpFill").style.width=pct+"%";
+document.getElementById("levelNote").textContent=next?`再攒 ${next-S.points} 积分晋升 ${LEVELS[li+1][1]}`:"已达最高段位，持续精进！";
+document.getElementById("pointVal").textContent=S.points;}
+
+/* ---------- 连续天数 ---------- */
+function touchStreak(){const today=new Date().toISOString().slice(0,10);
+if(S.lastVisit===today)return;
+const yest=new Date(Date.now()-864e5).toISOString().slice(0,10);
+S.streak=(S.lastVisit===yest)?S.streak+1:1;S.lastVisit=today;saveState();}
+function renderStreak(){document.getElementById("streakVal").textContent=S.streak;}
+
+/* ---------- 每日签到（每天限领 1 次，+100 积分） ---------- */
+function todayLocal(){const d=new Date();
+return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function yesterdayLocal(){const d=new Date(Date.now()-864e5);
+return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function canCheckin(){return S.checkin.last!==todayLocal();}
+function doCheckin(){if(!canCheckin()){toast("今天已经领过啦，明天再来～");return;}
+  S.checkin.streak=(S.checkin.last===yesterdayLocal())?S.checkin.streak+1:1;
+  S.checkin.last=todayLocal();S.checkin.total=(S.checkin.total||0)+1;
+  S.checkin.history=S.checkin.history||[];
+  if(!S.checkin.history.includes(todayLocal()))S.checkin.history.push(todayLocal());
+  S.points+=100;saveState();renderStreak();renderCheckinBtn();
+  /* 如果当前在成长档案页，刷新日历 */
+  if(VIEW==="me"){const calEl=document.getElementById("checkinCalendar");if(calEl)renderCheckinCalendar(calEl);}
+  toast("🎁 签到成功！+100 积分 · 已连续签到 "+S.checkin.streak+" 天");}
+function renderCheckinBtn(){const b=document.getElementById("checkinBtn");if(!b)return;
+if(canCheckin()){b.className="checkin-btn";b.textContent="🎁 每日签到 · 领 100 积分";}
+else{b.className="checkin-btn done";b.textContent="✅ 今日已签到 · 连续 "+S.checkin.streak+" 天";}}
+let __toastTimer=null;
+function toast(msg){let t=document.getElementById("globalToast");
+if(!t){t=document.createElement("div");t.id="globalToast";t.className="toast";document.body.appendChild(t);}
+t.textContent=msg;t.classList.add("show");clearTimeout(__toastTimer);
+__toastTimer=setTimeout(()=>t.classList.remove("show"),2600);}
+
+/* ---------- 导航 ---------- */
+const VIEWS=[
+{id:"chat",ico:"💬",name:"教练陪练",desc:"和 AI 产品教练自由问答，讲解概念、出题、面试，随时打断追问"},
+{id:"kb",ico:"📚",name:"知识库",desc:"四大方向核心概念卡片，点开细读并标记已掌握"},
+{id:"tools",ico:"🧰",name:"AI工具",desc:"每日推荐最新最好用的 AI 工具，今日推荐自动轮换"},
+{id:"quiz",ico:"🎯",name:"刷题训练",desc:"分领域刷题，即时判分与解析，帮你定位薄弱点"},
+{id:"iv",ico:"🎤",name:"面试模拟",desc:"高频面试题，自己先答再看参考思路与自评清单"},
+{id:"cost",ico:"💰",name:"费用明细",desc:"AI 教练调用花费与 Token 明细，可设置预算"},
+{id:"me",ico:"📊",name:"成长档案",desc:"积分、连续天数、各领域掌握度一目了然"}
+];
+let VIEW="chat";
+function buildNav(){const nav=document.getElementById("nav");nav.innerHTML="";
+VIEWS.forEach(v=>{const b=document.createElement("button");b.className="nav-btn"+(VIEW===v.id?" active":"");
+b.innerHTML=`<span class="ico">${v.ico}</span><span>${v.name}</span>`;b.onclick=()=>go(v.id);nav.appendChild(b);});}
+function go(id){VIEW=id;buildNav();const v=VIEWS.find(x=>x.id===id);
+document.getElementById("pageTitle").textContent=v.name;document.getElementById("pageDesc").textContent=v.desc;
+render();}
+
+/* ---------- 渲染分发 ---------- */
+function render(){const el=document.getElementById("view");el.innerHTML="";
+if(VIEW==="chat")renderChat(el);else if(VIEW==="kb")renderKB(el);else if(VIEW==="tools")renderTools(el);
+else if(VIEW==="quiz")renderQuiz(el);else if(VIEW==="iv")renderIV(el);else if(VIEW==="cost")renderCost(el);else{renderMe(el);const calEl=document.getElementById("checkinCalendar");if(calEl)renderCheckinCalendar(calEl);}}
+
+/* ============================================================
+ * 模块一：教练陪练对话
+ * ============================================================ */
+let chatLog=[];
+/* ---------- 会话管理（自动保存 / 回看） ---------- */
+const SESS_INDEX_KEY="aipm_chat_index";
+function genSessionId(){return "sess_"+Date.now()+"_"+Math.random().toString(36).slice(2,6);}
+function getSessionIndex(){try{return JSON.parse(localStorage.getItem(SESS_INDEX_KEY))||[]}catch(e){return [];}}
+function saveSessionIndex(idx){localStorage.setItem(SESS_INDEX_KEY,JSON.stringify(idx));}
+function loadSessionMessages(sid){try{return JSON.parse(localStorage.getItem("aipm_chat_"+sid))||[]}catch(e){return [];}}
+function saveSessionMessages(sid,msgs){localStorage.setItem("aipm_chat_"+sid,JSON.stringify(msgs));}
+function createSession(){
+  const sid=genSessionId();const now=new Date().toISOString();
+  const idx=getSessionIndex();idx.unshift({id:sid,title:"新会话",count:0,first:"",created:now,lastActive:now});
+  saveSessionIndex(idx);saveSessionMessages(sid,[]);
+  return sid;
+}
+function deleteSession(sid){
+  const idx=getSessionIndex().filter(s=>s.id!==sid);saveSessionIndex(idx);
+  localStorage.removeItem("aipm_chat_"+sid);
+  if(localStorage.getItem("aipm_last_session")===sid)localStorage.removeItem("aipm_last_session");
+}
+function updateSessionMeta(sid,firstMsg,msgCount){
+  const idx=getSessionIndex();const s=idx.find(x=>x.id===sid);if(!s)return;
+  if(!s.first&&firstMsg){s.title=firstMsg.slice(0,30)+(firstMsg.length>30?"…":"");s.first=firstMsg.slice(0,80);}
+  s.count=msgCount;s.lastActive=new Date().toISOString();
+  saveSessionIndex(idx);
+}
+let __currentSessionId=null;
+function ensureSession(){if(!__currentSessionId){__currentSessionId=createSession();}}
+function saveCurrentChat(){if(!__currentSessionId)return;
+  /* 没有实际提问就不存档 */
+  if(chatLog.length<=1)return;
+  const msgs=chatLog.map(m=>({who:m.who,html:m.html}));saveSessionMessages(__currentSessionId,msgs);updateSessionMeta(__currentSessionId,chatLog.length>1?chatLog[1].html:"",chatLog.length);
+  /* 持久化当前会话 ID，刷新后恢复 */
+  localStorage.setItem("aipm_last_session",__currentSessionId);}
+function loadChatSession(sid){
+  const msgs=loadSessionMessages(sid);if(!msgs.length)return;
+  __currentSessionId=sid;chatLog=msgs;
+  localStorage.setItem("aipm_last_session",sid);render();
+  pushMsg("coach","<span style=\"color:var(--tx3)\">📋 已加载历史会话 · 继续提问或<a href=\"javascript:void(0)\" onclick=\"newChatSession()\" style=\"color:var(--indigo2)\">开始新会话</a></span>");
+}
+function newChatSession(){
+  /* 保存当前会话 */
+  if(__currentSessionId&&chatLog.length>1)saveCurrentChat();
+  __currentSessionId=null;chatLog=[];render();toast("✅ 已开启新会话，发第一条消息时自动存档");}
+function showHistory(){
+  const idx=getSessionIndex();
+  document.getElementById("modalBox").innerHTML=`<button class="x" onclick="closeModal()">✕</button>
+  <h3 style="margin-bottom:12px">📋 历史会话</h3>
+  ${idx.length?idx.map(s=>{
+    const ago=Math.floor((Date.now()-new Date(s.lastActive).getTime())/86400000);
+    const agoStr=ago<1?"今天":ago+"天前";
+    return `<div class="sess-item" data-sid="${s.id}" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer;transition:.15s" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='var(--line)'">
+    <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.title||"新会话"}</div>
+    <div style="font-size:11.5px;color:var(--tx3);margin-top:2px">${s.count||0} 条消息 · ${agoStr}</div></div>
+    <button class="chip" data-del="${s.id}" style="font-size:11px;color:var(--red);flex-shrink:0;margin-left:10px;padding:4px 10px" onclick="event.stopPropagation();if(confirm('删除此会话？')){deleteSession('${s.id}');showHistory();}">🗑️</button></div>`;}).join("")
+  :'<div class="empty" style="padding:20px 0">暂无历史会话</div>'}
+  <div class="modal-actions" style="margin-top:12px"><button class="btn btn-ghost" onclick="closeModal()">关闭</button></div>`;
+  document.getElementById("modal").classList.add("show");document.getElementById("modalBox").scrollTop=0;
+  document.querySelectorAll(".sess-item").forEach(el=>el.onclick=function(){const sid=this.dataset.sid;closeModal();loadChatSession(sid);});}
+/* 退出时自动保存 */
+window.addEventListener("beforeunload",()=>{if(__currentSessionId&&chatLog.length>1)saveCurrentChat();});
+function renderChat(el){
+  migrateOldLlmConfig();
+  const keys=getLlmKeys();const activeId=getActiveKeyId();
+  const modelOpts=keys.length?keys.map(k=>{
+    const providerLabel={deepseek:"DeepSeek",openai:"OpenAI",custom:"自定义"}[k.provider]||k.provider;
+    return `<option value="${k.id}" ${k.id===activeId?"selected":""}>${k.label}（${providerLabel} · ${k.model}）</option>`;
+  }).join(""):'<option value="">-- 未配置 API Key --</option>';
+  el.innerHTML=`<div class="chat-wrap">
+<div class="chat-scroll" id="chatScroll"></div>
+<div class="chat-input"><div class="input-box">
+<textarea id="chatInput" rows="1" placeholder="问我任何 AI 产品问题，比如『RAG 是什么』『帮我出一道题』『模拟面试』…（Enter 发送，Shift+Enter 换行）"></textarea>
+<button class="send-btn" id="sendBtn">发送</button></div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+<span class="hint-line">离线教练 · 输入「出题」「面试」「讲解 + 关键词」可触发对应模式</span>
+<span style="display:flex;gap:6px;align-items:center">
+<select id="modelSelector" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:4px 8px;font-size:11.5px;color:var(--tx2);outline:none;max-width:220px;cursor:pointer">${modelOpts}</select>
+<button class="chip" id="historyBtn" style="font-size:11.5px">📋 历史会话</button>
+<button class="chip" id="newSessBtn" style="font-size:11.5px">➕ 新会话</button></span></div></div></div>`;
+/* 恢复上次会话 */
+const lastSid=localStorage.getItem("aipm_last_session");
+const lastMsgs=lastSid?loadSessionMessages(lastSid):[];
+if(lastMsgs&&lastMsgs.length>1){
+  __currentSessionId=lastSid;chatLog=lastMsgs;
+  /* 更新会话索引中的最后活跃时间 */
+  const idx=getSessionIndex();const s=idx.find(x=>x.id===lastSid);
+  if(s)s.lastActive=new Date().toISOString();saveSessionIndex(idx);
+}else{/* 不预创建会话，等用户提问时再创建 */__currentSessionId=null;chatLog=[];}
+const sc=document.getElementById("chatScroll");
+if(!chatLog.length){chatLog.push({who:"coach",html:coachIntro()});}else{
+  /* 恢复会话时加一条提示 */
+  chatLog.push({who:"coach",html:"<span style=\"color:var(--tx3)\">📋 已恢复上次会话 · 继续提问或<a href=\"javascript:void(0)\" onclick=\"newChatSession()\" style=\"color:var(--indigo2)\">开始新会话</a></span>"});
+}
+chatLog.forEach(m=>sc.appendChild(msgDom(m)));
+if(chatLog[chatLog.length-1].who==="coach")appendQuick(sc);
+const ta=document.getElementById("chatInput");
+ta.addEventListener("input",()=>{ta.style.height="auto";ta.style.height=Math.min(ta.scrollHeight,130)+"px";});
+ta.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){if(e.isComposing||e.keyCode===229)return;e.preventDefault();userSend();}});
+document.getElementById("sendBtn").onclick=userSend;
+sc.scrollTop=sc.scrollHeight;
+/* 历史会话与新建会话 */
+document.getElementById("historyBtn").onclick=showHistory;
+document.getElementById("newSessBtn").onclick=newChatSession;
+/* 模型选择器切换 */
+const ms=document.getElementById("modelSelector");
+if(ms)ms.onchange=function(){setActiveKeyId(this.value);toast("✅ 已切换至 "+(this.options[this.selectedIndex].text));};
+}
+function coachIntro(){return `你好，我是你的 <span class="hl">AI 产品教练</span> 👋 我会基于内置知识图谱陪你代练。你可以：<br>
+・直接问概念：如「<b>RAG 是什么</b>」「<b>幻觉怎么解决</b>」<br>
+・问前沿趋势：如「<b>WorkBuddy 的架构</b>」「<b>办公 Agent 是什么</b>」（知识包自动更新）<br>
+・说「<b>出题</b>」→ 我立刻出一道题考你<br>
+・说「<b>面试</b>」→ 进入模拟面试，你先答我点评<br>
+・说「<b>推荐资源</b>」或「<b>项目实战</b>」→ 给你真实学习链接和手把手项目步骤`;
+}
+function msgDom(m){const d=document.createElement("div");d.className="msg "+m.who;
+d.innerHTML=`<div class="avatar">${m.who==="coach"?"教":"你"}</div><div class="bubble">${m.html}</div>`;return d;}
+function appendQuick(sc){const q=document.createElement("div");q.className="msg coach";q.style.maxWidth="100%";
+q.innerHTML=`<div class="avatar" style="visibility:hidden">·</div><div style="flex:1"><div class="quick">
+${["给我讲讲 RAG","Prompt/RAG/微调怎么选","出一道大模型基础的题","开始模拟面试","推荐学习资源","有什么项目可以做"].map(t=>`<button class="chip" data-q="${t}">${t}</button>`).join("")}</div></div>`;
+sc.appendChild(q);}
+function pushMsg(who,html){chatLog.push({who,html});const sc=document.getElementById("chatScroll");
+sc.appendChild(msgDom({who,html}));sc.scrollTop=sc.scrollHeight;
+/* 自动保存会话（仅保存有实际提问的） */
+if(who==="user"){ensureSession();saveCurrentChat();}}
+function coachTypingThen(html,delay){const sc=document.getElementById("chatScroll");
+const t=document.createElement("div");t.className="msg coach";t.id="typingMsg";
+t.innerHTML=`<div class="avatar">教</div><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div>`;
+sc.appendChild(t);sc.scrollTop=sc.scrollHeight;
+setTimeout(()=>{t.remove();pushMsg("coach",html);appendQuick(sc);},delay);}
+
+let _lastSend=0,_lastTxt="";
+function userSend(){const ta=document.getElementById("chatInput");const txt=ta.value.trim();if(!txt)return;
+const now=Date.now();if(txt===_lastTxt&&now-_lastSend<500)return;_lastSend=now;_lastTxt=txt;
+ta.value="";ta.style.height="auto";pushMsg("user",escapeHtml(txt));coachRespond(txt);}
+function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])).replace(/\n/g,"<br>");}
+
+/* ---------- 学习资源库（含真实链接） ---------- */
+const RESOURCES=[
+{topic:"llm-basics",title:"Andrew Ng - Prompt Engineering for Developers",url:"https://www.deeplearning.ai/short-courses/chatgpt-prompt-engineering-for-developers/",type:"课程",desc:"吴恩达免费提示词工程课，约1.5小时，学完掌握结构化提示词公式"},
+{topic:"llm-basics",title:"Andrew Ng - Building and Evaluating Advanced RAG",url:"https://www.deeplearning.ai/short-courses/building-and-evaluating-advanced-rag/",type:"课程",desc:"RAG 进阶课程，覆盖切分/检索/重排/评估全链路"},
+{topic:"llm-basics",title:"Andrew Ng - AI Agentic Design Patterns with AutoGPT",url:"https://www.deeplearning.ai/short-courses/ai-agentic-design-patterns-with-autogpt/",type:"课程",desc:"Agent 设计模式课程，学 ReAct/工具调用/规划"},
+{topic:"rag",title:"Dify 官方文档 - RAG 管道搭建指南",url:"https://dify.ai/docs/guides/rag",type:"文档",desc:"开源平台 Dify 的 RAG 配置教程，含切分参数与检索策略调优"},
+{topic:"rag",title:"Coze 知识库功能文档",url:"https://www.coze.cn/docs/guides/knowledge",type:"文档",desc:"扣子知识库搭建教程，含文档上传/自动切分/QA 对配置"},
+{topic:"product",title:"人人都是产品经理 - AI产品经理专题",url:"https://www.woshipm.com/tag/ai%E4%BA%A7%E5%93%81%E7%BB%8F%E7%90%86",type:"文章",desc:"国内最大产品社区，大量 AI 产品案例拆解与实战文章"},
+{topic:"product",title:"Lenny's Newsletter - AI & PM",url:"https://www.lennysnewsletter.com/",type:"文章",desc:"英文 PM 必读周刊，AI 产品方法与行业洞察"},
+{topic:"product",title:"a16z AI 板块",url:"https://a16z.com/ai/",type:"文章",desc:"顶级 VC 的 AI 投资与趋势分析，观点前沿"},
+{topic:"product",title:"Designing Machine Learning Systems - Chip Huyen",url:"https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",type:"书籍",desc:"AI PM 必读的系统设计书籍，偏技术但 PM 能读懂"},
+{topic:"ai-hr",title:"HRTechChina - AI+HR 专题",url:"https://www.hrtechchina.com/",type:"文章",desc:"国内 HR 科技前沿媒体，AI+HR 产品与行业动态"},
+{topic:"tools",title:"Coze（扣子）- 零代码 AI Bot 平台",url:"https://www.coze.cn",type:"工具",desc:"字节出品，拖拽搭建 AI Bot，打 demo 最快路径"},
+{topic:"tools",title:"Dify - 开源 LLM 应用开发平台",url:"https://dify.ai",type:"工具",desc:"开源自部署，RAG 管道 + Agent 编排 + 评估闭环"},
+{topic:"tools",title:"Lovable - AI 前端生成",url:"https://lovable.dev",type:"工具",desc:"一句话生成网页应用，AI PM 做原型验证的神器"},
+{topic:"tools",title:"Cursor - AI 原生 IDE",url:"https://www.cursor.com",type:"工具",desc:"AI 编程工具，了解 AI 编程产品能力边界必试"},
+{topic:"community",title:"机器之心",url:"https://www.jiqizhixin.com/",type:"社区",desc:"国内头部 AI 技术媒体，跟踪前沿技术动态"},
+{topic:"community",title:"量子位",url:"https://www.qbitai.com/",type:"社区",desc:"AI 产业媒体，产品与技术动态第一时间"},
+];
+
+/* ---------- 项目实战指南（手把手步骤） ---------- */
+const PROJECTS=[
+{id:"proj-1",title:"项目一：HR 政策知识问答机器人",goal:"搭建一个基于公司制度文档的 AI 问答机器人，HR 同事问政策能秒回答案并附引用来源",level:"入门",tools:["Coze（扣子）","公司制度文档3-5份"],time:"2-3 小时",
+steps:[
+"① 收集资料：找 3-5 份公司制度文档（员工手册、考勤制度、薪酬福利），确保是当前最新版本。",
+"② 注册 Coze：打开 coze.cn → 注册/登录 → 点击「创建 Bot」。",
+"③ 设定人设：Bot 名称「HR 政策助手」，人设填写「你是 HR 政策助手，基于公司制度文档回答员工问题，必须附引用来源；不确定时引导用户联系 HR 部门」。",
+"④ 上传知识库：在 Bot 配置中开启「知识库」→ 上传文档 → 选择自动切分 → 保存。",
+"⑤ 试跑测试：输入「年假怎么休」「公积金怎么提取」「试用期多长」，看回答是否准确且附引用来源。",
+"⑥ 优化：如果答非所问，检查切分策略（试下调大/调小 chunk size）；如果回答不准确，看文档质量（缺的内容补上）。",
+"⑦ 发布：点击「发布」→ 生成分享链接 → 发给 3 位同事试用，收集反馈。",
+"⑧ 复盘：写一份《HR 问答机器人实战报告》，包含：使用工具、搭建步骤、测试结果、用户反馈、改进方向。"
+],assessment:"展示评估思维——回答准确率多少？用户采纳率多少？人工转接率多少？"},
+{id:"proj-2",title:"项目二：AI 会议纪要自动生成器",goal:"用提示词工程做一个结构化会议纪要生成器，输入会议录音转写文本，输出带有结论/待办/负责人的结构化纪要",level:"入门",tools:["ChatGPT / Claude / DeepSeek","一份会议录音转写样本"],time:"1-2 小时",
+steps:[
+"① 准备样本：找一份真实的会议录音转写文字（30-60 分钟会议，约 5000-10000 字）。",
+"② 先写直觉版提示词：直接问「请总结这份会议纪要」，看看效果，记录问题（太泛/没结构化/待办不清晰）。",
+"③ 再写结构化版提示词：角色「你是一位专业的会议纪要分析师」+ 背景「这是一份[项目名]的会议转写」+ 任务「输出结构化纪要」+ 约束「包含：会议主题、时间、参会人、讨论要点、结论、待办事项（含负责人+DDL）」+ 输出格式「Markdown 表格」。",
+"④ 对比两版：把直觉版和结构化版的结果放在一起对比，看结构化程度、信息完整度、待办提取准确率。",
+"⑤ 迭代优化：试调温度参数（0.1 vs 0.5），看哪个更稳定；加 Few-shot 示例（给一个完美纪要的样例）。",
+"⑥ 产出：整理一份《提示词对比实验报告》，包含直觉版 vs 结构化版的结果截图、你的改进过程、对提示词工程的心得。"
+],assessment:"重点展示对比实验思维——同一任务不同提示词的效果差异，以及你如何系统性地优化。"},
+
+{id:"proj-3",title:"项目三：AI 简历筛选助手（HR+AI 方向）",goal:"用 AI 做一个简历初筛助手，给定岗位描述和一批简历，输出匹配度排序和关键信息提取",level:"进阶",tools:["ChatGPT / Claude","3-5 份真实简历（脱敏）","1 份岗位描述"],time:"2-3 小时",
+steps:[
+"① 准备材料：找 1 份真实的岗位描述和 3-5 份脱敏简历（删掉姓名联系方式）。",
+"② 定义任务：明确 AI 要做什么——① 从每份简历提取关键信息（工作年限、技能、行业、学历）② 对照 JD 做匹配度评分 ③ 输出排序表格。",
+"③ 设计提示词：角色「你是一位招聘专家」+ 任务「对照 JD 评估简历匹配度」+ 输出格式「表格：姓名隐去|年限|关键技能|匹配度评分(1-5)|匹配理由」+ 约束「只基于简历实际内容，不自行脑补；敏感信息脱敏」。",
+"④ 跑测试：把 JD 和简历一起发给 AI，看输出结果。",
+"⑤ 分析问题：AI 的评分是否合理？有没有漏掉关键匹配点？有没有偏见问题（如对性别、年龄的敏感特征判断）？",
+"⑥ 写产品分析：基于这次实验，写一份《AI 简历筛选产品分析》，包含：可行性判断（AI 能做到什么程度）、风险点（公平性/合规）、产品设计建议（人机协作模式）。"
+],assessment:"这是 AI+HR 方向的作品集利器——展示你懂 HR 场景、懂 AI 能力边界、懂合规风险。"},
+
+{id:"proj-4",title:"项目四：端到端 RAG 知识问答系统",goal:"在 Dify 上搭建一个完整的 RAG 知识问答系统，包含知识库构建、检索调优、评估集评测",level:"进阶",tools:["Dify（自部署或云版）","10 份以上行业资料","评估集表格"],time:"4-6 小时",
+steps:[
+"① 注册 Dify：打开 dify.ai → 注册 → 创建一个新的「知识库」应用。",
+"② 收集资料：找 10 份以上行业资料（行业报告、产品文档、公开资料），格式不限。",
+"③ 上传并配置：上传资料 → 选择切分策略（建议先试 Auto + chunk size 500）→ 选择 Embedding 模型 → 保存。",
+"④ 建测试集：用 Excel 或飞书表格建一个评估集，格式：问题 | 标准答案 | 判定要点 | 难易度，至少 20 条。",
+"⑤ 跑首轮评测：用 20 条问题依次测试，记录每条回答质量（准确/部分准确/错误/答不出），算准确率。",
+"⑥ 调优一轮：根据 bad case 定位问题，改参数后重跑，对比前后准确率。",
+"⑦ 产出报告：写一份《RAG 项目评测报告》，包含：场景、数据方案、评估集设计、首轮数据、调优过程、前后对比。"
+],assessment:"这是 PM 面试中最有说服力的作品——展示你完整走了一遍 RAG 全链路，且带了评估数据。"}
+];
+
+/* ---------- 资源/项目查询路由 ---------- */
+function handleResourceQuery(txt){
+  const low=txt.toLowerCase();
+  const topicMap={"大模型基础":["llm-basics"],"rag":["rag","llm-basics"],"prompt":["llm-basics"],"产品设计":["product"],"面试":["ai-pm-interview"],"hr":["ai-hr"],"工具":["tools"],"社区":["community"],"资源":["llm-basics","rag","product","ai-hr","tools","community"]};
+  let topics=[];
+  Object.keys(topicMap).forEach(k=>{if(low.includes(k)||low.includes("资源")&&k!=="资源")topics=topics.concat(topicMap[k]);});
+  if(!topics.length)topics=["llm-basics","rag","product","tools"];
+  const matched=RESOURCES.filter(r=>topics.includes(r.topic)).slice(0,8);
+  if(!matched.length)return coachTypingThen("我帮你找找学习资源……<br>当前内置资源覆盖：大模型基础、RAG、产品设计、AI+HR、工具推荐。你可以说具体方向，如「推荐 RAG 学习资源」。",600);
+  let html=`<span class="hl">📚 学习资源推荐</span><br><br>`;
+  matched.forEach((r,i)=>{html+=`${i+1}. <b>${r.title}</b> <span style="color:var(--tx3);font-size:12px">[${r.type}]</span><br>
+  <span style="color:var(--tx3);font-size:12.5px">${r.desc}</span><br>
+  <a href="${r.url}" target="_blank" style="color:var(--indigo2);font-size:12px">🔗 ${r.url}</a><br><br>`;});
+  html+=`<div class="quick"><button class="chip" data-act="projects">🛠️ 看看有什么项目可以练手</button><button class="chip" data-q="推荐资源">更多资源</button></div>`;
+  coachTypingThen(html,600);
+}
+function handleProjectQuery(txt){
+  const low=txt.toLowerCase();let proj=PROJECTS;
+  if(low.includes("hr")||low.includes("政策问答")||low.includes("项目一"))proj=[PROJECTS[0]];
+  else if(low.includes("会议")||low.includes("项目二"))proj=[PROJECTS[1]];
+  else if(low.includes("简历")||low.includes("hr")||low.includes("招聘")||low.includes("项目三"))proj=[PROJECTS[2]];
+  else if(low.includes("rag")||low.includes("项目四"))proj=[PROJECTS[3]];
+  let html=`<span class="hl">🛠️ AI PM 项目实战</span><br><br>`;
+  proj.forEach(p=>{html+=`<b>${p.title}</b><br><span style="color:var(--tx3);font-size:12.5px">难度：${p.level} ｜ 工具：${p.tools.join("、")} ｜ 预计 ${p.time}</span><br><br>
+  <b>🎯 目标：</b>${p.goal}<br><br><b>📋 手把手步骤：</b><br>${p.steps.map(s=>s+"<br>").join("")}<br>
+  <b>💡 作品集评估要求：</b>${p.assessment}<br><br><hr style="border-color:var(--line);margin:12px 0"><br>`;});
+  html+=`<div class="quick"><button class="chip" data-q="推荐资源">📚 需要学习资源先补基础</button></div>`;
+  coachTypingThen(html,600);
+}
+
+/* 意图路由 + LLM 接入 */
+let quizSession=null, ivSession=null;
+/* ---------- 多 API Key 管理 ---------- */
+const LLM_KEYS_KEY="aipm_llm_keys";
+const LLM_ACTIVE_KEY="aipm_llm_active";
+function migrateOldLlmConfig(){
+  try{const old=JSON.parse(localStorage.getItem("aipm_llm_config"));if(!old||!old.apiKey)return;
+    const keys=getLlmKeys();if(keys.find(k=>k.apiKey===old.apiKey))return;
+    const id="key_"+Date.now();
+    keys.push({id,label:old.provider==="deepseek"?"DeepSeek":old.provider==="custom"?"自定义":old.provider||"默认",provider:old.provider||"openai",
+      model:old.model||"gpt-4o-mini",apiKey:old.apiKey,apiUrl:old.apiUrl||"",budget:old.budget||0});
+    localStorage.setItem(LLM_KEYS_KEY,JSON.stringify(keys));
+    localStorage.setItem(LLM_ACTIVE_KEY,id);
+    localStorage.removeItem("aipm_llm_config");
+  }catch(e){}
+}
+function getLlmKeys(){try{return JSON.parse(localStorage.getItem(LLM_KEYS_KEY))||[]}catch(e){return [];}}
+function saveLlmKeys(keys){localStorage.setItem(LLM_KEYS_KEY,JSON.stringify(keys));}
+function getActiveKeyId(){try{let id=localStorage.getItem(LLM_ACTIVE_KEY);if(!id){const keys=getLlmKeys();if(keys.length)id=keys[0].id;}return id||null;}catch(e){return null;}}
+function setActiveKeyId(id){localStorage.setItem(LLM_ACTIVE_KEY,id);}
+function getActiveLlmConfig(){
+  migrateOldLlmConfig();
+  const keys=getLlmKeys();const activeId=getActiveKeyId();
+  const key=keys.find(k=>k.id===activeId);
+  if(!key||!key.apiKey)return null;
+  return {enabled:true,provider:key.provider,model:key.model,apiKey:key.apiKey,apiUrl:key.apiUrl||"",budget:key.budget||0,label:key.label};
+}
+function getLlmConfig(){return getActiveLlmConfig();}
+async function callLLM(prompt,systemMsg){
+  const cfg=getLlmConfig();if(!cfg)return null;
+  const url=cfg.provider==="custom"&&cfg.apiUrl?cfg.apiUrl:
+    cfg.provider==="deepseek"?"https://api.deepseek.com/chat/completions":
+    "https://api.openai.com/v1/chat/completions";
+  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),30000);
+  try{
+    const resp=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+cfg.apiKey},
+      body:JSON.stringify({model:cfg.model||"gpt-4o-mini",messages:[{role:"system",content:systemMsg},{role:"user",content:prompt}],
+      temperature:0.7,max_tokens:1500}),signal:controller.signal});
+    clearTimeout(timer);
+    if(!resp.ok)return {content:"⚠️ API 请求失败（"+resp.status+"）"+((await resp.text()).slice(0,100)||""),usage:null};
+    const data=await resp.json();
+    const content=data.choices?.[0]?.message?.content;
+    if(!content)return {content:"⚠️ API 返回格式异常",usage:null};
+    const usage=data.usage||{prompt_tokens:0,completion_tokens:0,total_tokens:0};
+    /* 记录用量 */
+    trackLLMUsage(cfg.model||"unknown",usage,cfg.provider,prompt,content,cfg.label||"");
+    return {content,usage};
+  }catch(e){clearTimeout(timer);
+    if(e.name==="AbortError")return {content:"⚠️ 请求超时（30 秒），请检查网络或 API 配置",usage:null};
+    if(e.message&&e.message.includes("Failed to fetch"))return {content:"⚠️ 网络请求失败：浏览器跨域限制（若从 file:// 打开，需用本地服务器启动）或网络不可用",usage:null};
+    return {content:"⚠️ 网络请求失败："+(e.message||"未知错误"),usage:null};}
+}
+/* LLM 用量与成本追踪 */
+const LLM_USAGE_KEY="aipm_llm_usage";
+const LLM_PRICES={
+  "deepseek-v4-flash":{in:0.15,out:0.60,unit:"/1M tokens"},
+  "deepseek-v4-pro":{in:0.50,out:2.00,unit:"/1M tokens"},
+  "deepseek-chat":{in:0.15,out:0.60,unit:"/1M tokens"},
+  "gpt-4o":{in:2.50,out:10.00,unit:"/1M tokens"},
+  "gpt-4o-mini":{in:0.15,out:0.60,unit:"/1M tokens"},
+  "gpt-4-turbo":{in:10.00,out:30.00,unit:"/1M tokens"},
+  "qwen-turbo-latest":{in:0,out:0,unit:"免费额度"},
+  "glm-4-flash":{in:0,out:0,unit:"免费额度"}
+};
+function getLLMUsage(){try{return JSON.parse(localStorage.getItem(LLM_USAGE_KEY))||{calls:0,prompt:0,completion:0,cost:0,days:{},models:{}};}catch(e){return {calls:0,prompt:0,completion:0,cost:0,days:{},models:{}};}}
+function trackLLMUsage(model,usage,provider,question,answer,label){
+  if(!usage||!usage.total_tokens)return;
+  const u=getLLMUsage();u.calls++;
+  u.prompt+=usage.prompt_tokens||0;u.completion+=usage.completion_tokens||0;
+  const price=LLM_PRICES[model]||{in:0,out:0};
+  const cost=((usage.prompt_tokens||0)/1e6*price.in)+((usage.completion_tokens||0)/1e6*price.out);
+  u.cost+=cost;
+  const today=new Date().toISOString().slice(0,10);
+  u.days[today]=u.days[today]||{calls:0,prompt:0,completion:0,cost:0};
+  u.days[today].calls++;u.days[today].prompt+=usage.prompt_tokens||0;
+  u.days[today].completion+=usage.completion_tokens||0;u.days[today].cost+=cost;
+  u.models[model]=u.models[model]||{calls:0,prompt:0,completion:0,cost:0};
+  u.models[model].calls++;u.models[model].prompt+=usage.prompt_tokens||0;
+  u.models[model].completion+=usage.completion_tokens||0;u.models[model].cost+=cost;
+  localStorage.setItem(LLM_USAGE_KEY,JSON.stringify(u));
+  /* 记录详细调用日志 */
+  const logs=JSON.parse(localStorage.getItem("aipm_llm_logs")||"[]");
+  logs.unshift({ts:new Date().toISOString(),model,provider,usage,cost,label:label||"",
+    q:(question||"").slice(0,500),a:(answer||"").slice(0,5000)});
+  /* 不设上限，持续累积 */
+  localStorage.setItem("aipm_llm_logs",JSON.stringify(logs));
+}
+const COACH_SYSTEM_PROMPT="你是一位资深的 AI 产品经理教练。你在帮助一位从 HR 背景转型 AI 产品经理的用户学习。回答要求：\n1. 使用清晰的 Markdown 格式排版：用 ### 做段落标题、**加粗**强调关键词、- 做项目符号列表\n2. 结构化、结论先行，用列表组织要点\n3. 结合用户的 HR 背景给出场景化建议\n4. 涉及技术概念时给出 PM 视角的解读\n5. 当用户问项目或实操时，给出具体可执行的步骤\n6. 回答控制在 3-5 个要点，简洁但有用\n7. 必要时可以反问用户，澄清需求后再深入回答";
+/* 简易 Markdown → HTML 转换 */
+function mdToHtml(s){
+  if(!s)return s;
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/### (.+)/g,'<h4 style="margin:12px 0 6px;color:var(--indigo2);font-size:15px;font-weight:800">$1</h4>')
+    .replace(/## (.+)/g,'<h3 style="margin:14px 0 8px;color:var(--tx);font-size:17px;font-weight:800">$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong style="color:var(--amber)">$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em style="color:var(--tx2)">$1</em>')
+    .replace(/^\- (.+)$/gm,'<li style="margin:4px 0">$1</li>')
+    .replace(/^(\d+)\. (.+)$/gm,'<li style="margin:4px 0">$2</li>')
+    .replace(/(<li.*<\/li>)\n(<li)/g,'$1$2')
+    .replace(/(<li[^>]*>.*<\/li>)\s*?(?!<li)/g,'<ul style="margin:6px 0 8px;padding-left:18px">$1</ul>')
+    .replace(/\n\n/g,'</p><p style="margin:8px 0">')
+    .replace(/\n/g,'<br>');}
+function coachRespond(txt){const low=txt.toLowerCase();
+if(quizSession)return handleQuizAnswer(txt);
+if(ivSession)return handleIVAnswer(txt);
+if(/(出题|来一?道|考我?|刷题|测试我|随机题)/.test(low)){return startQuizChat();}
+if(/(面试|模拟面试|面我|面试模拟|开始面试)/.test(low)){return startIVChat();}
+if(/(资源|学习资源|课程|教程|推荐.*资源|学什么)/.test(low)||/(推荐.*工具|工具有哪些)/.test(low)){return handleResourceQuery(txt);}
+if(/(项目|实战|实操|动手|练手|练习|项目实战|项目一|项目二|项目三|项目四)/.test(low)){return handleProjectQuery(txt);}
+if(/(你好|嗨|在吗|hi|hello|开始|帮助|怎么用|菜单)/.test(low)){return coachTypingThen(coachIntro(),500);}
+/* 当 LLM 已配置启用时，优先使用大模型回答 */
+const llmCfg=getLlmConfig();
+if(llmCfg){
+  const sc=document.getElementById("chatScroll");
+  if(sc&&!document.getElementById("llmIndicator")){
+    const ind=document.createElement("div");ind.id="llmIndicator";ind.style.cssText="font-size:11px;color:var(--tx3);text-align:center;padding:6px 0";
+    ind.textContent="🤖 AI 教练模式 · 正在调用大模型…";sc.appendChild(ind);}
+  callLLM(txt,COACH_SYSTEM_PROMPT).then(reply=>{
+    const ind=document.getElementById("llmIndicator");if(ind)ind.remove();
+    /* 处理错误：reply 是字符串（以 ⚠️ 开头）或 {content, usage} 对象 */
+    if(typeof reply==="string"&&reply.startsWith("⚠️")){
+      const hit=findKB(txt);
+      if(hit)return pushMsg("coach",kbAnswer(hit)+"<br><div style=\"font-size:11px;color:var(--amber);margin-top:6px\">⚠️ 大模型暂时不可用，错误详情：<br>"+reply+"</div>");
+      return pushMsg("coach",reply+"<br><br>（已切换为内置知识库回答）");}
+    const content=typeof reply==="object"?reply.content:reply;
+    const usage=typeof reply==="object"?reply.usage:null;
+    const activeCfg=getActiveLlmConfig();
+    const modelLabel=activeCfg?activeCfg.label+" · "+activeCfg.model:"未知模型";
+    const usageInfo=usage?`<br><span style="font-size:11px;color:var(--tx3)">📊 输入 ${usage.prompt_tokens||0} · 输出 ${usage.completion_tokens||0} · 共 ${usage.total_tokens||0} tokens</span>`:"";
+    pushMsg("coach",mdToHtml(content||"抱歉，AI 暂时无法回答。")+"<div style=\"font-size:11px;color:var(--tx3);margin-top:8px;padding-top:6px;border-top:1px solid var(--line)\">🤖 "+modelLabel+(usageInfo||"")+"</div>");
+  }).catch(e=>{const ind=document.getElementById("llmIndicator");if(ind)ind.remove();
+    const hit=findKB(txt);
+    const errMsg="⚠️ 大模型调用失败："+((e&&e.message)||"未知错误");
+    if(hit)pushMsg("coach",kbAnswer(hit)+"<br><div style=\"font-size:11px;color:var(--amber);margin-top:6px\">"+errMsg+"</div>");
+    else pushMsg("coach",errMsg);});
+  return;
+}
+/* 未启用 LLM 时走知识库匹配 */
+const hit=findKB(txt);
+if(hit)return coachTypingThen(kbAnswer(hit),700);
+/* 内置知识库兜底 */
+return coachTypingThen(`这个问题我还不够确定，先把我会的讲清楚 💪<br>你可以换个说法，或点下面的高频话题：
+<div class="quick">${TOPIC_HINTS.slice(0,6).map(t=>`<button class="chip" data-q="${t}">${t}</button>`).join("")}</div>`,600);}
+
+/* 知识库匹配 */
+function findKB(txt){const t=txt.toLowerCase();let best=null,bestScore=0;
+KB.forEach(k=>{let sc=0;const hay=(k.title+" "+k.tags.join(" ")).toLowerCase();
+hay.split(/\s+/).forEach(w=>{if(w.length>=2&&t.includes(w))sc+=w.length;});
+if(t.includes(k.title.toLowerCase()))sc+=8;if(sc>bestScore){bestScore=sc;best=k;}});
+return bestScore>=4?best:null;}
+function kbAnswer(k){S.kbRead[k.id]=1;saveState();
+const dom=DOMAINS[k.domain];
+return `<span class="tag" style="color:${dom.color};border-color:${dom.color}">${dom.icon} ${dom.name}</span> ${k.mod?`<span style="color:var(--tx3);font-size:12px">${k.mod}</span>`:""} <b>${k.title}</b><br>
+<div style="margin-top:8px">${stripToPreview(k.body,420)}</div>
+<div class="quick"><button class="chip" data-act="kfull" data-id="${k.id}">📖 查看完整讲解</button>
+<button class="chip" data-act="quizdom" data-id="${k.domain}">🎯 出一道这方面的题</button></div>`;}
+function stripToPreview(html,n){const div=document.createElement("div");div.innerHTML=html;let s=div.innerHTML;
+return s.length>n?s.slice(0,n)+"…":s;}
+
+/* 聊天内出题 */
+let chatQuiz=null;
+function startQuizChat(){const pool=QUIZ;const q=pool[Math.floor(Math.random()*pool.length)];
+chatQuiz=q;const dom=DOMAINS[q.domain];
+let optsHtml=q.opts.map((o,i)=>`<button class="chip" data-act="answer" data-i="${i}" style="display:block;text-align:left;margin:5px 0;min-width:260px">${"ABCD"[i]}. ${o}</button>`).join("");
+coachTypingThen(`来一道 <span class="tag" style="color:${dom.color};border-color:${dom.color}">${dom.icon} ${dom.name}</span> 的题：<br><br><b>${q.q}</b><div class="quick" style="flex-direction:column;align-items:stretch">${optsHtml}</div>`,500);}
+function handleQuizAnswer(txt){if(/^[\s]*[ABCD1-4][\s。.]*$/i.test(txt)){
+let idx="ABCD".indexOf(txt.trim()[0].toUpperCase());if(idx<0)idx=parseInt(txt)-1;
+return answerChatQuiz(idx);}
+pushMsg("coach","请直接回复选项字母（A/B/C/D）哦～");}
+function answerChatQuiz(idx){const q=chatQuiz;if(idx==null||idx<0)return pushMsg("coach","没看懂选项，请回复 A/B/C/D 或对应数字。");
+const correct=Array.isArray(q.ans)?q.ans.includes(idx):q.ans===idx;
+const dom=DOMAINS[q.domain];S.quiz.total++;S.byDomain[q.domain].t++;
+if(correct){S.quiz.right++;S.byDomain[q.domain].r++;S.points+=8;}saveState();renderStreak();
+let mark=correct?`<span class="good">✔ 回答正确，+8 积分！</span>`:`<span class="bad">✘ 不对，正确答案是 ${Array.isArray(q.ans)?q.ans.map(i=>"ABCD"[i]).join("、"):"ABCD"[q.ans]}。</span>`;
+chatQuiz=null;
+pushMsg("coach",`${mark}<br><br><b>解析：</b>${q.exp}<br><div class="quick"><button class="chip" data-act="again">🔁 再来一题</button><button class="chip" data-act="gokb">📚 去知识库补这块</button></div>`);}
+
+/* 聊天内面试 */
+function startIVChat(){const q=INTERVIEW[Math.floor(Math.random()*INTERVIEW.length)];ivSession=q;
+const dom=DOMAINS[q.domain];
+coachTypingThen(`进入 <span class="hl">模拟面试</span>（${dom.icon} ${dom.name} · ${q.cat}）🎤<br><br><b>${q.q}</b><br><br><span style="color:var(--tx3);font-size:12.5px">现在请你像面试一样，<b>把答案打在输入框</b>发给我，我会给你参考思路和点评清单。</span>`,600);}
+function handleIVAnswer(txt){if(txt.length<6)return pushMsg("coach","答案太短啦，尽量完整说一遍～（也可以直接说『看答案』）");
+if(/(看答案|跳过|不知道|放弃)/.test(txt)){return revealIV(txt);}
+const q=ivSession;ivSession=null;S.points+=12;saveState();
+const coverage=estimateCoverage(txt,q.ref);
+pushMsg("coach",`<span class="good">👍 已作答（覆盖度约 ${coverage}%）。</span> 对照下面的参考思路，看看你能补上哪些点：<br><br>
+<b>考察意图</b>：${q.intent}<br><br><b>参考思路</b>：<br>${q.ref}<br>
+<b>✔ 自评清单</b><br>${q.check.map(c=>"・"+c).join("<br>")}
+<div class="quick"><button class="chip" data-act="againIV">🎤 再来一题面试</button></div>`);}
+function revealIV(){const q=ivSession;ivSession=null;
+pushMsg("coach",`参考思路如下，建议先自己答再看：<br><br><b>考察意图</b>：${q.intent}<br><br><b>参考思路</b>：<br>${q.ref}<br>
+<div class="quick"><button class="chip" data-act="againIV">🎤 再来一题面试</button></div>`);}
+function estimateCoverage(ans,ref){const words=ref.replace(/<[^>]+>/g," ").split(/[\s，。、：；]+/).filter(w=>w.length>=2);
+let hit=0;words.forEach(w=>{if(ans.includes(w))hit++;});
+return Math.min(95,Math.round(hit/Math.max(words.length,1)*100*2));}
+
+/* 全局点击（聊天内按钮） */
+document.addEventListener("click",e=>{
+/* 快捷话题：直接把问题发出去 */
+const qc=e.target.closest("[data-q]");
+if(qc){const ta=document.getElementById("chatInput");if(ta&&VIEW==="chat"){ta.value=qc.dataset.q;userSend();}return;}
+const c=e.target.closest("[data-act]");if(!c)return;
+const act=c.dataset.act;
+if(act==="kfull"){openKB(c.dataset.id);}
+else if(act==="quizdom"){startQuizChat();}
+else if(act==="again"){startQuizChat();}
+else if(act==="againIV"){startIVChat();}
+else if(act==="gokb"){go("kb");}
+else if(act==="projects"){handleProjectQuery("");}
+else if(act==="answer"){if(chatQuiz)answerChatQuiz(parseInt(c.dataset.i));}
+});
+
+/* ============================================================
+ * 模块二：知识库
+ * ============================================================ */
+let kbFilter="all",kbSearch="",kbDeep=false;
+/* 深度知识库（进阶版，补充技术细节与架构深度） */
+const DEEP_KB=[{
+  id:"db1",domain:"base",mod:"A1 原理认知",no:1,
+  title:"Transformer 架构详解：Attention 机制与训练细节",
+  tags:["transformer","attention","自注意力","多头","位置编码","softmax","归一化"],
+  body:`<h4>架构全景</h4>
+<p>Transformer 由编码器（Encoder）和解码器（Decoder）堆叠而成。每个模块核心包含两个子层：<b>多头自注意力（Multi-Head Self-Attention）</b>和<b>前馈神经网络（FFN）</b>，每层后接残差连接（Residual Connection）与层归一化（Layer Norm）。</p>
+<h4>Attention 的数学本质（PM 理解到这一层就够了）</h4>
+<p>Attention(Q,K,V) = softmax(QK^T / √d) × V。拆解：</p>
+<ul>
+<li><b>Q（查询）</b>：当前词在"找什么"</li>
+<li><b>K（键）</b>：其他词在"展示什么"</li>
+<li><b>Q×K</b>：算每个词和当前词的相关性得分</li>
+<li><b>÷√d</b>：缩放防止 softmax 梯度消失</li>
+<li><b>softmax</b>：归一化成概率分布</li>
+<li><b>×V（值）</b>：按权重聚合信息</li>
+</ul>
+<h4>多头注意力（Multi-Head）</h4>
+<p>不是只算一组 Q/K/V，而是拆成 8~96 个头（head），每个头在不同子空间学不同模式（语法关系、语义关联、位置关系等），最后拼接起来。这是模型"同时关注多个方面"的能力来源。</p>
+<h4>位置编码（Positional Encoding）</h4>
+<p>Transformer 本身没有顺序感（不像 RNN 逐个读），所以需要把位置信息加进去。早期用正弦/余弦函数编码，现在主流改用<b>可学习的相对位置编码</b>，让模型理解"词与词的相对距离"。</p>
+<h4>训练细节</h4>
+<ul>
+<li><b>残差连接</b>：解决深层网络梯度消失问题，让信息直通</li>
+<li><b>层归一化</b>：加速收敛，稳定训练</li>
+<li><b>学习率预热（Warmup）</b>：前几步从小学习率逐渐增大，避免早期梯度爆炸</li>
+<li><b>Dropout</b>：随机丢弃部分神经元防过拟合</li>
+</ul>
+<div class="callout">💡 PM 面试用：被问"Transformer 为什么比 RNN 强"，答三点——并行计算（同时看所有词 vs 逐个看）、长距离依赖（Attention 直接关联远距离词 vs 逐步衰减）、可扩展性（堆叠更多层效果更好，RNN 堆深了反而难训）。</div>`
+},{
+  id:"db2",domain:"base",mod:"A1 原理认知",no:2,
+  title:"Tokenizer 深度对比与上下文窗口优化策略",
+  tags:["tokenizer","bpe","sentencepiece","tiktoken","上下文窗口","压缩","优化"],
+  body:`<h4>Tokenizer 是什么</h4>
+<p>Tokenizer 把文本拆成模型能处理的 Token 序列。它决定了：你的输入花多少钱、模型能"看到"多少内容、对非英语/代码/专业术语的表现如何。</p>
+<h4>主流 Tokenizer 对比</h4>
+<ul>
+<li><b>BPE（Byte-Pair Encoding）</b>：GPT 系列使用。从字符开始，逐步合并高频共现对。擅长处理未登录词（拆成子词）。</li>
+<li><b>SentencePiece（Unigram LM）</b>：LLaMA/百川等使用。不依赖空格分词（对中文友好），直接以原始文本训练。</li>
+<li><b>tiktoken</b>：OpenAI 的快速 BPE 实现，cl100k_base 编码约 100K 词汇量。</li>
+</ul>
+<h4>中文 Token 的陷阱</h4>
+<p>中文约 1~2 字/token，英文约 0.75 词/token。但不同模型的 Tokenizer 对中文效率差异很大：LLaMA 的中文 Tokenizer 效率低（中文 1.5~3 字/token），而国产模型（如 Qwen、DeepSeek）做了中文优化（2~4 字/token）。<b>做中文产品时，选择中文 Tokenizer 效率高的模型，成本直接差 2 倍。</b></p>
+<h4>上下文窗口优化策略</h4>
+<ul>
+<li><b>RoPE 扩展</b>：旋转位置编码（RoPE）天然支持一定程度的长度外推，NTK-aware 插值可进一步扩展</li>
+<li><b>窗口滑动</b>：只保留最近 N 个 Token 的完整注意力，之前的用压缩表示</li>
+<li><b>分层摘要</b>：长文本先分段摘要，再在摘要上做推理</li>
+<li><b>检索增强</b>：不把所有文本塞进上下文，只检索相关片段（RAG 的核心动机）</li>
+</ul>
+<div class="callout">💡 PM 决策：做国际化产品时，Tokenizer 对多语言的支持效率直接决定成本。选模型前，先拿目标语言的典型文本跑一遍 token 计数，算单位成本。</div>`
+},{
+  id:"db3",domain:"base",mod:"A2 训练与选型",no:1,
+  title:"选型决策树完整版：量化成本模型与评估矩阵",
+  tags:["决策树","量化","成本模型","评估矩阵","选型","tco","roi"],
+  body:`<h4>完整决策树（三层递进）</h4>
+<p><b>第一层：技术可行性</b>——模型当前能力能否胜任？</p>
+<ul>
+<li>事实性任务（问答/抽取/分类）→ RAG / 微调</li>
+<li>创造性任务（写作/创意/头脑风暴）→ Prompt Engineering 足够</li>
+<li>推理型任务（数学/逻辑/代码）→ 选强推理模型（DeepSeek / O1 系列）</li>
+</ul>
+<p><b>第二层：成本效益</b>——值不值得做？</p>
+<ul>
+<li>估算月调用量 × 单次 Token 成本 = 月推理成本</li>
+<li>对比人工处理同样工作量的成本</li>
+<li>考虑隐形成本：评估集维护、数据清洗、模型迭代、灰度上线</li>
+</ul>
+<p><b>第三层：风险控制</b>——出了事怎么办？</p>
+<ul>
+<li>容错率：答错/编造的代价有多大？</li>
+<li>合规要求：数据能否出域？是否需要审计留痕？</li>
+<li>降级方案：模型挂了/超时了，用户怎么办？</li>
+</ul>
+<h4>量化成本模型模板</h4>
+<p>构建成本模型时，按以下结构计算：</p>
+<ul>
+<li><b>输入成本</b> = 平均输入 Token/次 × 月调用次数 × 输入单价</li>
+<li><b>输出成本</b> = 平均输出 Token/次 × 月调用次数 × 输出单价</li>
+<li><b>总推理成本</b> = 输入成本 + 输出成本</li>
+<li><b>人均成本</b> = 总推理成本 / MAU</li>
+<li><b>毛利率</b> = (收入 - 总推理成本 - 固定成本) / 收入</li>
+</ul>
+<h4>评估矩阵（模型选型时对照）</h4>
+<ul>
+<li><b>准确率</b>：测试集上的正确率（区分事实型 vs 创造型任务）</li>
+<li><b>延迟</b>：P50/P95 响应时间</li>
+<li><b>成本</b>：每百万 Token 价格</li>
+<li><b>上下文窗口</b>：最大支持 Token 数</li>
+<li><b>多语言</b>：中文 vs 英文效率</li>
+<li><b>生态</b>：是否支持 Function Call、MCP、多模态</li>
+</ul>
+<div class="callout">💡 面试金句：选型不是选"最好的模型"，而是选「在目标场景下，成本可控、风险可接受、体验达标」的模型。把这个框架背下来，面试时直接套用。</div>`
+},{
+  id:"db4",domain:"base",mod:"A3 关键技术",no:1,
+  title:"RAG 全链路深度参数调优：Chunk、Embedding、Rerank",
+  tags:["rag","chunk","embedding","rerank","切分","召回率","参数调优","混合检索"],
+  body:`<h4>Chunk 切分策略对比</h4>
+<ul>
+<li><b>固定大小切分</b>：每 N 个 Token 一段，简单但可能切断语义。推荐 256~512 token。</li>
+<li><b>递归字符切分</b>：按段落→句子→词逐级降级，语义完整度更高（LangChain 默认方案）。</li>
+<li><b>语义切分</b>：用 Embedding 检测语义边界，在话题转换处分段。效果最好但计算成本高。</li>
+<li><b>重叠窗口</b>：相邻 chunk 有 10~20% 重叠，避免边界信息丢失。</li>
+</ul>
+<p><b>经验法则</b>：chunk 大小取决于你的检索粒度。问"这款手机的续航"→用小 chunk（256 token）；问"总结第三季度财报"→用大 chunk（1024 token）。</p>
+<h4>Embedding 模型选型</h4>
+<ul>
+<li><b>text-embedding-3-small</b>：OpenAI，性价比最高，维度 512/1536 可选</li>
+<li><b>bge-large-zh-v1.5</b>：BAAI，中文最优，1024 维</li>
+<li><b>m3e-base</b>：Moka，中文轻量级，768 维</li>
+<li><b>gte-Qwen2</b>：阿里，基于 Qwen2 的 Embedding，中文效果强</li>
+</ul>
+<h4>混合检索（Hybrid Search）</h4>
+<p>语义检索（向量） + 关键词检索（BM25）加权融合。语义检索理解"年假怎么休"和"如何申请年假"是同一意思；BM25 精确匹配"工号 TS-2024-001"这类专有名词。典型权重：语义 0.7 + 关键词 0.3，可根据场景调优。</p>
+<h4>Rerank 精排</h4>
+<p>召回 Top-50 后，Rerank 模型逐对比较，把最相关的 3~5 条排到最前面。Rerank 是计算密集型操作，只在召回后做一次，不做全量检索。推荐：</p>
+<ul>
+<li><b>BGE-Reranker-v2-m3</b>：BAAI，多语言，中文效果好</li>
+<li><b>Cohere Rerank</b>：API 服务，延迟低但需联网</li>
+</ul>
+<div class="callout">💡 PM 调优口诀：<b>资料质量 > 切分策略 > 检索召回 > 模型提示词</b>。90% 的 RAG 效果问题出在前三步，别一上来就调 Prompt。</div>`
+},{
+  id:"db5",domain:"base",mod:"A3 关键技术",no:2,
+  title:"Agent 架构深度解析：ReAct、Function Call 与记忆系统设计",
+  tags:["agent","react","function call","工具调用","记忆","规划","执行循环","repl"],
+  body:`<h4>ReAct 循环：思考→行动→观察→重复</h4>
+<p>ReAct（Reasoning + Acting）是当前 Agent 最主流的执行框架。每一步循环：</p>
+<ol>
+<li><b>思考（Thought）</b>：模型分析当前状态，决定下一步做什么</li>
+<li><b>行动（Action）</b>：调用一个工具（Function Call），传入参数</li>
+<li><b>观察（Observation）</b>：工具返回结果，模型分析结果</li>
+<li><b>重复</b>：直到任务完成或达到最大步数</li>
+</ol>
+<h4>Function Call Schema 设计最佳实践</h4>
+<ul>
+<li><b>参数命名清晰</b>：用语义化名称，如 send_email(recipient, subject, body) 而非 send(a, b, c)</li>
+<li><b>参数描述详细</b>：每个参数写清楚含义、格式、约束，如 "日期格式：YYYY-MM-DD"</li>
+<li><b>返回结构标准化</b>：统一返回 {success: bool, data: any, error: string} 格式</li>
+<li><b>错误处理</b>：工具返回错误时，Agent 应能重试或降级，而非卡死</li>
+<li><b>工具数量控制</b>：一次暴露 5~10 个工具最佳，太多则模型选错概率上升</li>
+</ul>
+<h4>记忆系统三层架构</h4>
+<ul>
+<li><b>短期记忆（Working Memory）</b>：当前会话的上下文（全部消息 + 中间结果）。受上下文窗口限制，用滑动窗口或摘要压缩管理。</li>
+<li><b>长期记忆（Long-term Memory）</b>：跨会话的持久化信息。用向量数据库存储，按需检索。OpenClaw 2.0 的 Background Memory Consolidation 就是自动把短期记忆沉淀为长期记忆。</li>
+<li><b>技能记忆（Skill Memory）</b>：可复用的工作流模板。Agent 从成功任务中提取经验，形成可重复调用的 Skills。OpenClaw 的 Self-learning 和 WorkBuddy 的 Skill 引擎都是这个思路。</li>
+</ul>
+<h4>Agent 失败模式诊断框架</h4>
+<ul>
+<li><b>循环卡死</b>：Agent 重复调用同一个工具，结果不变 → 设最大步数 + 检测循环模式</li>
+<li><b>工具选错</b>：参数正确但调错了工具 → 优化工具描述 + 减少同时暴露的工具数</li>
+<li><b>参数幻觉</b>：编造不存在的参数值 → 参数枚举 + 严格校验</li>
+<li><b>上下文丢失</b>：长任务中忘记了前面的结果 → 显式维护状态摘要</li>
+</ul>
+<div class="callout">💡 PM 面试题：被问"Agent 和 Chatbot 的产品设计区别"，答——Chatbot 关注单轮回答质量，Agent 关注任务完成率 + 执行链路 + 失败恢复 + 人工干预。评估指标从"回答好不好"变成"事办没办成"。</div>`
+},{
+  id:"dp1",domain:"product",mod:"B1 认知框架",no:1,
+  title:"AI PRD 完整模板与评估体系设计",
+  tags:["prd","模板","评估体系","测试集","指标","上线","灰度"],
+  body:`<h4>AI PRD 与传统 PRD 的差异</h4>
+<p>传统 PRD 写"功能逻辑"，AI PRD 多写四块：</p>
+<ul>
+<li><b>任务定义</b>：把业务需求翻译成具体的 AI 任务类型（分类/抽取/问答/生成）</li>
+<li><b>数据方案</b>：需要什么数据、从哪来、怎么清洗、标注怎么做</li>
+<li><b>评估体系</b>：怎么测才算好、上线标准是什么</li>
+<li><b>成本模型</b>：单次调用成本、月总成本、毛利率</li>
+</ul>
+<h4>AI PRD 模板（推荐结构）</h4>
+<ol>
+<li><b>场景与目标</b>：解决什么问题、目标用户、成功标准</li>
+<li><b>任务定义</b>：输入 → 模型处理 → 输出，具体到字段格式</li>
+<li><b>技术方案</b>：选型理由（Prompt/RAG/微调）、模型选择、数据源</li>
+<li><b>体验设计</b>：流式输出、加载态、兜底、降级、人工接管</li>
+<li><b>评估体系</b>：测试集构成、核心指标、通过标准</li>
+<li><b>成本模型</b>：单次成本、月调用量、单位经济</li>
+<li><b>风险与合规</b>：幻觉风险、数据合规、安全策略</li>
+<li><b>灰度计划</b>：分阶段上线、观测指标、回滚条件</li>
+</ol>
+<h4>评估体系设计（最关键的部分）</h4>
+<ul>
+<li><b>测试集构成</b>：高频场景 60% + 边界情况 25% + 对抗样本 15%</li>
+<li><b>核心指标</b>：准确率、召回率、幻觉率、格式合规率、用户满意度</li>
+<li><b>通过标准</b>：准确率 ≥ 90%、幻觉率 ≤ 5%、P95 延迟 ≤ 3s</li>
+<li><b>评估方法</b>：自动评估（规则检查 + 大模型评判）+ 人工抽检（10% 样本）</li>
+</ul>
+<h4>灰度上线三阶段</h4>
+<ul>
+<li><b>内测（5% 用户）</b>：验证功能可用性，主要找 bug 和体验问题</li>
+<li><b>公测（30% 用户）</b>：验证评估指标达标，收集用户反馈</li>
+<li><b>全量（100% 用户）</b>：确认指标稳定，准备回滚方案</li>
+</ul>
+<div class="callout">💡 面试准备：把你做过的项目按这个 PRD 模板重新写一遍，面试时按这个结构讲，比说"我做过一个 AI 产品"有力 10 倍。</div>`
+},{
+  id:"dp2",domain:"product",mod:"B2 需求与场景",no:1,
+  title:"AI 产品场景适配度定量评估：三维评分卡",
+  tags:["场景评估","评分卡","价值","可行性","风险","立项","优先级"],
+  body:`<h4>三维评分卡（每维 1~5 分）</h4>
+<p><b>价值维</b></p>
+<ul>
+<li>5 分：核心业务流程必备，不做直接影响收入/效率</li>
+<li>4 分：高频场景（日均使用 1000+ 次），用户痛点明显</li>
+<li>3 分：锦上添花，但能提升体验</li>
+<li>2 分：低频需求，价值有限</li>
+<li>1 分：没人真正需要</li>
+</ul>
+<p><b>可行性维</b></p>
+<ul>
+<li>5 分：模型能力显著超过任务要求，数据完备，成本可控</li>
+<li>4 分：模型能力达标，数据基本可用，成本在预算内</li>
+<li>3 分：模型能力接近但需优化，数据需一定清洗</li>
+<li>2 分：模型能力勉强，数据质量差，成本较高</li>
+<li>1 分：当前模型无法胜任，数据不可得</li>
+</ul>
+<p><b>风险维</b>（分数越高越安全，注意：这里是安全分）</p>
+<ul>
+<li>5 分：答错无实质影响，有完善的降级/兜底</li>
+<li>4 分：答错有轻微影响，但可快速修正</li>
+<li>3 分：答错可能造成一定损失，但可控</li>
+<li>2 分：答错可能造成较大损失，合规风险存在</li>
+<li>1 分：答错可能造成重大损失/法律风险</li>
+</ul>
+<h4>决策矩阵</h4>
+<ul>
+<li><b>价值 ≥ 4 且 可行性 ≥ 4 且 风险 ≥ 3</b> → ✅ 立即立项</li>
+<li><b>价值 ≥ 4 但 可行性 < 3</b> → 先做 PoC（概念验证），用数据降低不确定性</li>
+<li><b>价值 ≥ 4 但 风险 < 3</b> → 缩小范围，先做"建议型/辅助型"功能，不进决策链</li>
+<li><b>价值 < 3</b> → ❌ 暂不立项，除非有战略意义</li>
+</ul>
+<h4>实践要点</h4>
+<ul>
+<li>评分卡要写评分理由，不是拍脑袋打分</li>
+<li>可行性维度要有"小规模实测数据"支撑，而非凭感觉</li>
+<li>每季度复盘已立项项目的评分，校准你的评分能力</li>
+</ul>
+<div class="callout">💡 面试题：被问"你怎么判断一个需求该不该做 AI"，拿出三维评分卡 + 一个你实际评估过的案例，直接碾压泛泛而谈的候选人。</div>`
+},{
+  id:"dhr1",domain:"hr",mod:"AI+HR 场景",no:1,
+  title:"AI 简历初筛系统：从架构设计到合规落地的完整方案",
+  tags:["hr","简历","初筛","合规","公平","偏差","个保法","可解释"],
+  body:`<h4>系统架构</h4>
+<ul>
+<li><b>输入层</b>：多渠道简历接入（招聘平台、邮箱、内推），PDF/Word/图片解析</li>
+<li><b>解析层</b>：用多模态模型提取结构化信息（教育背景、工作经历、技能标签、项目经验）</li>
+<li><b>匹配层</b>：JD 解析 → Embedding 向量化 → 与简历向量做语义匹配，计算匹配度分数</li>
+<li><b>筛选层</b>：硬性条件过滤（学历/年限/证书）→ 软性能力评分（项目经验/技能匹配）→ 综合排序</li>
+<li><b>输出层</b>：Top-K 简历推荐 + 匹配理由 + 亮点提炼 + 关注点提示</li>
+</ul>
+<h4>公平性设计（必须内置，不可后补）</h4>
+<ul>
+<li><b>敏感特征屏蔽</b>：在解析层识别并脱敏姓名、性别、年龄、照片、籍贯等敏感字段</li>
+<li><b>偏差检测</b>：定期统计筛选结果在不同群体中的分布，发现偏差立即调整</li>
+<li><b>可解释性</b>：每条筛选结果附带匹配理由，候选人可申诉</li>
+<li><b>人工兜底</b>：AI 只做预筛选排序，不直接淘汰；最终由 HR 决策</li>
+</ul>
+<h4>合规要点</h4>
+<ul>
+<li><b>最小化采集</b>：只采集与岗位相关的能力字段，不采集无关信息</li>
+<li><b>明确授权</b>：候选人知情同意，说明 AI 参与筛选</li>
+<li><b>可删除</b>：候选人有权要求删除简历数据</li>
+<li><b>审计留痕</b>：每条筛选记录保存 180 天，可追溯可审计</li>
+</ul>
+<h4>产品化建议</h4>
+<ul>
+<li><b>MVP 阶段</b>：只做 JD-简历匹配度打分 + 关键词高亮，不做自动淘汰</li>
+<li><b>第二阶段</b>：加结构化信息抽取 + 匹配理由生成</li>
+<li><b>第三阶段</b>：加偏差检测仪表盘 + 可解释性报告</li>
+<li><b>长期</b>：加面试问题推荐、候选人画像、人才库智能激活</li>
+</ul>
+<div class="callout">💡 你的 HR 背景是巨大优势。面试时说"我既懂 HR 业务流程，又懂 AI 技术边界"，比纯技术背景的 PM 更有说服力。简历初筛是 AI+HR 最成熟的场景，也是你最应该准备的作品集方向。</div>`
+}];
+/* 自定义知识库（用户上传） */
+const CUSTOM_KB_KEY="aipm_custom_kb";
+function getCustomKB(){try{return JSON.parse(localStorage.getItem(CUSTOM_KB_KEY))||[]}catch(e){return [];}}
+function saveCustomKB(entries){localStorage.setItem(CUSTOM_KB_KEY,JSON.stringify(entries));}
+function deleteCustomKB(id){if(!confirm("确定删除这条自定义知识吗？"))return;
+  const custom=getCustomKB().filter(e=>e.id!==id);saveCustomKB(custom);closeModal();render();toast("🗑️ 已删除");}
+function getActiveKB(){const base=kbDeep?DEEP_KB:KB;const custom=getCustomKB();return custom.length?[...base,...custom]:base;}
+function latestPackDate(){try{const ds=window.__PACKS.map(p=>p.meta&&p.meta.date).filter(Boolean).sort();return ds.length?ds[ds.length-1]:"";}catch(e){return "";}}
+function renderKB(el){const filterBtns=["all",...Object.keys(DOMAINS)].map(d=>{
+const label=d==="all"?"全部":DOMAINS[d].name;
+return `<button class="fbtn ${kbFilter===d?"active":""}" data-f="${d}">${label}</button>`;}).join("");
+el.innerHTML=`<div class="page"><div class="page-head"><h2>📚 知识库</h2>
+<p>按照「方向 → 模块 → 卡片」三级体系组织：大模型基础、AI产品设计、面试实战、AI+HR 四大能力模块 + 自动更新的前沿趋势包。按模块逐张学习，读完即掌握。</p></div>
+<div class="toolbar">${filterBtns}
+<button class="fbtn ${kbDeep?'active':''}" id="kbDepthToggle" style="background:${kbDeep?'rgba(16,185,129,.2)':''};border-color:${kbDeep?'var(--green)':'var(--line)'};color:${kbDeep?'var(--green2)':'var(--tx2)'}">${kbDeep?'🔬 深入模式':'📖 简明模式'}</button>
+<button class="fbtn" id="kbUploadBtn" style="color:var(--indigo2)">📤 上传文件</button>
+<button class="fbtn" id="kbToggle" style="margin-left:auto">🕸️ 知识网络</button>
+<input class="search" id="kbSearch" placeholder="搜索概念/关键词…" value="${kbSearch}"></div>
+<div id="kbPackInfo" style="font-size:12px;color:var(--tx3);margin:-6px 0 14px"></div>
+<div class="grid" id="kbGrid"></div>
+<canvas id="kbCanvas" style="display:none"></canvas>
+<div class="graph-tip" id="graphTip"></div></div>`;
+drawKBGrid();
+const kpi=document.getElementById("kbPackInfo");
+if(kpi){const activeList=getActiveKB();const customCount=getCustomKB().length;
+kpi.textContent=(window.__PACKS&&window.__PACKS.length?("已加载知识包 "+window.__PACKS.length+" 个 · 最新更新 "+(latestPackDate()||"—")+" · "):"")+"知识卡 "+activeList.length+" 张"+(customCount?"（含自定义 "+customCount+" 张）":"")+" · 系统可自我进化";}
+el.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{kbFilter=b.dataset.f;render();});
+document.getElementById("kbSearch").addEventListener("input",e=>{kbSearch=e.target.value;drawKBGrid();});
+document.getElementById("kbToggle").onclick=()=>toggleKBView();
+document.getElementById("kbDepthToggle").onclick=()=>{kbDeep=!kbDeep;render();toast(kbDeep?"🔬 已切换到深入模式，内容更深更细":"📖 已切换到简明模式");};
+document.getElementById("kbUploadBtn").onclick=()=>{
+  const inp=document.createElement("input");inp.type="file";inp.accept=".txt,.md,.json";
+  inp.onchange=async function(){const file=this.files[0];if(!file)return;
+    if(file.name.endsWith(".json")){try{
+      const text=await file.text();const data=JSON.parse(text);
+      if(Array.isArray(data)){const custom=getCustomKB();const ids=new Set(custom.map(c=>c.id));
+        let added=0;data.forEach(d=>{if(d.id&&d.title&&d.body&&!ids.has(d.id)){custom.push({...d,domain:d.domain||"custom",tags:d.tags||[],packDate:"自定义"});ids.add(d.id);added++;}});
+        saveCustomKB(custom);toast("✅ 已导入 "+added+" 条自定义知识");render();}
+      else toast("⚠️ JSON 格式不正确，需要数组");}catch(e){toast("⚠️ JSON 解析失败："+e.message);}return;}
+    const text=await file.text();const lines=text.split("\n").filter(l=>l.trim()).length;
+    const custom=getCustomKB();const id="custom_"+Date.now();
+    custom.push({id,domain:"custom",mod:"自定义上传",no:1,title:file.name.replace(/\.[^.]+$/,""),tags:["自定义",file.name.split(".").pop()||"txt"],
+      body:`<h4>📄 ${file.name}</h4><p>上传时间：${new Date().toLocaleString()}</p><hr><pre style="white-space:pre-wrap;font-size:13px;line-height:1.7;background:#0d1320;padding:14px;border-radius:10px;color:#dbe4f2;overflow-x:auto">${escapeHtml(text)}</pre>`});
+    saveCustomKB(custom);toast("✅ 已导入自定义知识：「"+file.name+"」（"+lines+" 行）");render();};
+  inp.click();};
+}
+function drawKBGrid(){const g=document.getElementById("kbGrid");if(!g)return;
+const q=kbSearch.toLowerCase();
+const activeList=getActiveKB();
+const list=activeList.filter(k=>(kbFilter==="all"||k.domain===kbFilter)&&
+(!q||(k.title+" "+k.tags.join(" ")+" "+(k.mod||"")).toLowerCase().includes(q)));
+if(!list.length){g.innerHTML=`<div class="empty">没有匹配的概念，换个关键词试试～</div>`;return;}
+/* 按方向 → 模块分组展示（三级体系） */
+const domOrder=Object.keys(DOMAINS);let html="";
+domOrder.forEach(dk=>{
+ const dl=list.filter(k=>k.domain===dk);if(!dl.length)return;
+ const mods=[...new Set(dl.map(k=>k.mod||"📦 前沿趋势包"))].sort();
+ mods.forEach(m=>{const ml=dl.filter(k=>(k.mod||"📦 前沿趋势包")===m);
+  const done=ml.filter(k=>S.kbRead[k.id]).length;
+  html+=`<div class="mod-head"><span class="mod-title">${DOMAINS[dk].icon} ${m}</span><span class="mod-prog">已掌握 ${done}/${ml.length}</span></div><div class="grid">`;
+  ml.sort((a,b)=>(a.no||99)-(b.no||99));
+  html+=ml.map(k=>{const d=DOMAINS[k.domain];const plain=stripTags(k.body);
+   return `<div class="kcard" data-id="${k.id}">
+<span class="dom" style="color:${d.color};background:${d.bg}">${d.icon} ${d.name} ${S.kbRead[k.id]?"· 已读":""}${k.packDate?" · 🔥"+k.packDate:""}</span>
+<h3>${k.title}</h3><p>${plain.slice(0,90)}…</p>
+<div class="meta"><span>${k.tags.slice(0,3).map(t=>"#"+t).join(" ")}</span><span>点击细读 →</span></div></div>`;}).join("");
+  html+=`</div>`;});});
+g.innerHTML=html;
+g.querySelectorAll(".kcard").forEach(c=>c.onclick=()=>openKB(c.dataset.id));}
+function stripTags(h){const d=document.createElement("div");d.innerHTML=h;return d.textContent.replace(/\s+/g," ");}
+
+function openKB(id){const activeList=getActiveKB();const k=activeList.find(x=>x.id===id);if(!k)return;S.kbRead[id]=1;saveState();
+const d=DOMAINS[k.domain]||{name:"自定义",icon:"📄",color:"#8b5cf6",bg:"rgba(139,92,246,.15)"};
+const idx=activeList.findIndex(x=>x.id===id);const prev=idx>0?activeList[idx-1]:null;const next=idx<activeList.length-1?activeList[idx+1]:null;
+document.getElementById("modalBox").innerHTML=`<button class="x" onclick="closeModal()">✕</button>
+<span class="dom" style="color:${d.color};background:${d.bg};display:inline-block;padding:4px 11px;border-radius:99px;font-size:12px;font-weight:700">${d.icon} ${d.name}</span>
+<h3 style="margin-top:10px">${k.title}</h3>
+<div class="sub">${k.mod?"模块 · "+k.mod+" | ":""}关键词：${k.tags.map(t=>"#"+t).join(" ")}</div>
+<div class="modal-body">${k.body}</div>
+<div class="modal-actions">
+${prev?`<button class="btn btn-ghost" onclick="window.openKBId('${prev.id}')">← 上一张</button>`:""}
+${next?`<button class="btn btn-ghost" onclick="window.openKBId('${next.id}')">下一张 →</button>`:""}
+${k.id.startsWith("custom_")?`<button class="btn btn-ghost" style="color:var(--red);border-color:var(--red)" onclick="deleteCustomKB('${k.id}')">🗑️ 删除自定义</button>`:""}
+<button class="btn btn-primary" data-act="quizdom2" data-id="${k.domain}">🎯 出一道这方面的题</button>
+<button class="btn btn-ghost" onclick="closeModal()">继续浏览</button></div>`;
+document.getElementById("modal").classList.add("show");
+document.getElementById("modalBox").scrollTop=0;}
+window.openKBId=function(id){openKB(id);};
+window.closeModal=()=>document.getElementById("modal").classList.remove("show");
+document.getElementById("modal").addEventListener("click",e=>{if(e.target.id==="modal")closeModal();});
+document.addEventListener("click",e=>{const c=e.target.closest("[data-act='quizdom2']");if(c){closeModal();go("quiz");quizFilter=c.dataset.id;render();}});
+
+/* ============================================================
+ * 模块三：刷题训练
+ * ============================================================ */
+let quizFilter="all",quizQueue=[],quizIdx=0,quizRight=0,quizAnswered=false;
+function renderQuiz(el){const btns=["all",...Object.keys(DOMAINS)].map(d=>{
+const label=d==="all"?"全部领域":DOMAINS[d].name;
+return `<button class="fbtn ${quizFilter===d?"active":""}" data-f="${d}">${label}</button>`;}).join("");
+el.innerHTML=`<div class="page"><div class="page-head"><h2>🎯 刷题训练</h2>
+<p>判断、单选、多选题混合。答对 +8 积分，答完立刻看解析。先做薄弱领域提效更高。</p></div>
+<div class="toolbar">${btns}<button class="btn btn-primary" id="startQuizBtn" style="margin-left:auto">🚀 开始一轮（10题）</button></div>
+<div id="quizArea"></div></div>`;
+el.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{quizFilter=b.dataset.f;render();});
+document.getElementById("startQuizBtn").onclick=startQuizRound;
+drawQuizSummary(el.querySelector("#quizArea"));}
+function drawQuizSummary(area){const rows=Object.keys(DOMAINS).map(d=>{const s=S.byDomain[d];
+const acc=s.t?Math.round(s.r/s.t*100):0;return `<div class="domain-row"><div class="nm">${DOMAINS[d].icon} ${DOMAINS[d].name}</div>
+<div class="bar"><i style="width:${acc}%;background:${DOMAINS[d].color}"></i></div>
+<div class="pct">${acc}%</div></div>`;}).join("");
+area.innerHTML=`<div class="quiz-card" style="text-align:center;padding:34px">
+<div style="font-size:34px;margin-bottom:10px">📈</div>
+<h3 style="margin-bottom:6px">各领域正确率</h3>
+<p style="color:var(--tx3);font-size:13px;margin-bottom:18px">累计作答 ${S.quiz.total} 题，答对 ${S.quiz.right} 题</p>
+<div style="text-align:left">${rows}</div></div>`;}
+function startQuizRound(){let pool=QUIZ.filter(q=>quizFilter==="all"||q.domain===quizFilter);
+pool=[...pool].sort(()=>Math.random()-.5).slice(0,10);
+if(!pool.length)return;quizQueue=pool;quizIdx=0;quizRight=0;drawQuizQ();}
+function drawQuizQ(){const area=document.getElementById("quizArea");if(quizIdx>=quizQueue.length)return drawQuizEnd(area);
+const q=quizQueue[quizIdx];const d=DOMAINS[q.domain];quizAnswered=false;
+const typeLabel=q.type==="multi"?"多选":q.type==="judge"?"判断":"单选";
+area.innerHTML=`<div class="quiz-card">
+<div class="quiz-head"><span class="dom-tag" style="color:${d.color};background:${d.bg}">${d.icon} ${d.name} · ${typeLabel}</span>
+<span>第 ${quizIdx+1} / ${quizQueue.length} 题</span></div>
+<div class="progress-thin"><i style="width:${quizIdx/quizQueue.length*100}%"></i></div>
+<div class="quiz-q">${q.q}</div>
+<div id="opts">${q.opts.map((o,i)=>`<div class="opt" data-i="${i}"><div class="key">${q.type==="judge"?"○":"ABCD"[i]}</div><div>${o}</div></div>`).join("")}</div>
+${q.type==="multi"?'<div style="font-size:12px;color:var(--tx3);margin:4px 0 10px">多选：点选完毕后点下方「提交」</div>':""}
+<div class="explain" id="expBox"></div>
+<div class="quiz-foot">
+<div class="score-strip"><div class="ss"><b id="curRight">${quizRight}</b><span>本轮答对</span></div></div>
+${q.type==="multi"?'<button class="btn btn-primary" id="submitMulti">提交本题答案</button>':""}
+<button class="btn btn-ghost" id="nextQ" style="display:none">下一题 →</button></div></div>`;
+const selected=new Set();
+area.querySelectorAll(".opt").forEach(o=>o.onclick=()=>{
+if(quizAnswered)return;const i=+o.dataset.i;
+if(q.type==="multi"){selected.has(i)?selected.delete(i):selected.add(i);o.classList.toggle("correct",selected.has(i));return;}
+gradeQuiz(i);});
+const sm=document.getElementById("submitMulti");if(sm)sm.onclick=()=>{if(!selected.size)return;gradeQuiz([...selected]);};
+document.getElementById("nextQ").onclick=()=>{quizIdx++;drawQuizQ();};}
+function gradeQuiz(sel){const q=quizQueue[quizIdx];if(quizAnswered)return;quizAnswered=true;
+const correct=Array.isArray(q.ans)?(Array.isArray(sel)&&sel.length===q.ans.length&&q.ans.every(a=>sel.includes(a))):q.ans===sel;
+if(correct)quizRight++;
+S.quiz.total++;S.byDomain[q.domain].t++;if(correct){S.quiz.right++;S.byDomain[q.domain].r++;S.points+=8;}saveState();renderStreak();
+document.querySelectorAll("#opts .opt").forEach(o=>{const i=+o.dataset.i;
+const isAns=Array.isArray(q.ans)?q.ans.includes(i):q.ans===i;
+const isSel=Array.isArray(sel)?sel.includes(i):sel===i;
+if(isAns)o.classList.add("correct");else if(isSel)o.classList.add("wrong");else o.classList.add("dim");});
+const eb=document.getElementById("expBox");
+eb.innerHTML=`<b>${correct?"✔ 回答正确 +8积分":"✘ 答错了"}。</b>${q.exp}`;eb.classList.add("show");
+document.getElementById("curRight").textContent=quizRight;
+document.getElementById("nextQ").style.display="inline-block";
+const sm=document.getElementById("submitMulti");if(sm)sm.style.display="none";}
+function drawQuizEnd(area){const acc=Math.round(quizRight/quizQueue.length*100);
+const verdict=acc>=80?"🏆 非常扎实，可以挑战下一个领域！":acc>=60?"💪 基本掌握，把错题对应的知识库再过一遍。":"📖 这块还不熟，建议先去知识库系统学一遍再来。";
+area.innerHTML=`<div class="quiz-card" style="text-align:center;padding:40px">
+<div style="font-size:40px">${acc>=80?"🏆":acc>=60?"💪":"📖"}</div>
+<h3 style="font-size:22px;margin:14px 0 6px">本轮完成：${quizRight} / ${quizQueue.length}</h3>
+<p style="color:var(--tx2)">正确率 ${acc}%</p>
+<p style="color:var(--tx3);font-size:13.5px;margin:12px 0 20px">${verdict}</p>
+<button class="btn btn-primary" onclick="startQuizRound()">🔁 再来一轮</button></div>`;}
+window.startQuizRound=startQuizRound;
+
+/* ============================================================
+ * 模块四：面试模拟
+ * ============================================================ */
+let ivFilter="all";
+function renderIV(el){const btns=["all",...Object.keys(DOMAINS)].map(d=>{
+const label=d==="all"?"全部方向":DOMAINS[d].name;
+return `<button class="fbtn ${ivFilter===d?"active":""}" data-f="${d}">${label}</button>`;}).join("");
+const list=INTERVIEW.filter(q=>ivFilter==="all"||q.domain===ivFilter);
+el.innerHTML=`<div class="page"><div class="page-head"><h2>🎤 面试模拟</h2>
+<p>高频面试题。先看题自己组织答案，再展开参考思路，对照清单逐条自评——这是最有效的刻意练习。</p></div>
+<div class="toolbar">${btns}</div>
+<div class="grid" id="ivGrid">${list.map((q,i)=>`<div class="iv-card" data-i="${INTERVIEW.indexOf(q)}">
+<div class="cat">${DOMAINS[q.domain].icon} ${DOMAINS[q.domain].name} · ${q.cat}</div>
+<h3>${q.q}</h3><p>考察：${q.intent}</p></div>`).join("")}</div></div>`;
+el.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{ivFilter=b.dataset.f;render();});
+el.querySelectorAll(".iv-card").forEach(c=>c.onclick=()=>openIV(+c.dataset.i));}
+let ivChecks=new Set();
+function openIV(i){const q=INTERVIEW[i];const d=DOMAINS[q.domain];ivChecks=new Set(S.ivChecks[i]||[]);
+document.getElementById("modalBox").innerHTML=`<button class="x" onclick="closeModal()">✕</button>
+<span class="dom" style="color:${d.color};background:${d.bg};display:inline-block;padding:4px 11px;border-radius:99px;font-size:12px;font-weight:700">${d.icon} ${d.name} · ${q.cat}</span>
+<h3 style="margin-top:10px;font-size:18px;line-height:1.6">${q.q}</h3>
+<div class="sub">面试官意图：${q.intent}</div>
+<div class="iv-area"><textarea id="ivAns" placeholder="先自己把答案完整写/说一遍，再往下看参考思路…">${S.iv[i]||""}</textarea></div>
+<div class="modal-actions"><button class="btn btn-ghost" id="revealRef">👉 我答完了，看参考思路</button></div>
+<div id="refPart" style="display:none">
+<h4 style="color:var(--amber);margin:18px 0 8px">📌 参考思路</h4>
+<div class="modal-body">${q.ref}</div>
+<h4 style="color:var(--green2);margin:18px 0 4px">✔ 自评清单（点选你做到的）</h4>
+<ul class="checklist" id="ckList">${q.check.map((c,x)=>`<li><div class="ck ${ivChecks.has(x)?"on":""}" data-x="${x}"></div><span>${c}</span></li>`).join("")}</ul>
+<div class="modal-actions"><button class="btn btn-primary" id="saveIV">💾 保存答案与自评</button></div></div>`;
+document.getElementById("modal").classList.add("show");document.getElementById("modalBox").scrollTop=0;
+document.getElementById("revealRef").onclick=()=>{document.getElementById("refPart").style.display="block";
+document.getElementById("modalBox").scrollTop=document.getElementById("modalBox").scrollHeight;};
+const ckList=document.getElementById("ckList");
+ckList.querySelectorAll(".ck").forEach(ck=>ck.onclick=()=>{const x=+ck.dataset.x;
+ck.classList.toggle("on");});
+document.getElementById("saveIV").onclick=()=>{
+S.iv[i]=document.getElementById("ivAns").value;
+const checks=[...ckList.querySelectorAll(".ck.on")].map(c=>+c.dataset.x);
+S.ivChecks[i]=checks;
+const newly=checks.length;
+if(!S.ivDone){S.ivDone={};}
+if(!S.ivDone[i])S.points+=10;S.ivDone[i]=1;saveState();renderStreak();
+closeModal();if(VIEW==="iv")render();};}
+
+/* ============================================================
+ * 模块五：成长档案
+ * ============================================================ */
+function renderMe(el){const readCount=Object.keys(S.kbRead).length;const ivCount=S.ivDone?Object.keys(S.ivDone).length:0;
+const accRate=S.quiz.total?Math.round(S.quiz.right/S.quiz.total*100):0;
+const weak=Object.keys(DOMAINS).map(d=>({d,s:S.byDomain[d].t?S.byDomain[d].r/S.byDomain[d].t:-1}))
+.filter(x=>x.s>=0).sort((a,b)=>a.s-b.s)[0];
+const llmU=getLLMUsage();
+const rows=Object.keys(DOMAINS).map(d=>{const s=S.byDomain[d];const acc=s.t?Math.round(s.r/s.t*100):0;
+return `<div class="domain-row"><div class="nm">${DOMAINS[d].icon} ${DOMAINS[d].name}</div>
+<div class="bar"><i style="width:${acc}%;background:${DOMAINS[d].color}"></i></div>
+<div class="pct">${acc}%</div></div>`;}).join("");
+el.innerHTML=`<div class="page"><div class="page-head"><h2>📊 成长档案</h2>
+<p>积分、连续天数与各领域掌握度。数据只存你这台电脑的本地浏览器里。</p></div>
+<div class="dash">
+<div class="dcard"><div class="num">${S.points}</div><div class="lbl">累计积分</div></div>
+<div class="dcard"><div class="num">${S.streak} 天</div><div class="lbl">连续学习</div></div>
+<div class="dcard"><div class="num">${readCount}/${KB.length}</div><div class="lbl">已读知识卡</div></div>
+<div class="dcard"><div class="num">${accRate}%</div><div class="lbl">刷题正确率</div></div>
+<div class="dcard"><div class="num">${ivCount}</div><div class="lbl">已完成面试题</div></div>
+<div class="dcard"><div class="num">${llmU.calls||0}</div><div class="lbl">AI 教练调用 · ${((llmU.prompt||0)+(llmU.completion||0)).toLocaleString()} tokens · 花费 ¥${(llmU.cost*7.2).toFixed(4)}</div></div>
+<div class="dcard"><div class="num">${S.checkin.total||0} 天</div><div class="lbl">累计签到（当前连续 ${S.checkin.streak||0} 天）</div></div>
+</div>
+<div id="checkinCalendar"></div>
+<div class="quiz-card" style="padding:22px 24px"><h3 style="margin-bottom:14px">各领域掌握度</h3>
+<div style="text-align:left">${rows||'<div class="empty">还没答题，先去刷几题吧～</div>'}</div></div>
+${weak?'<div class="callout" style="background:rgba(245,158,11,.08);border-left:3px solid var(--amber);padding:14px 16px;border-radius:0 12px 12px 0;margin-top:18px;color:#fde8c4">💡 <b>薄弱点提示：</b>你在 <b>'+DOMAINS[weak.d].name+'</b> 正确率偏低，建议先去知识库把这块概念补齐，再回来刷题巩固。</div>':''}</div>`;}
+/* 签到日历 */
+function renderCheckinCalendar(el){
+  const history=S.checkin.history||[];
+  const now=new Date();let year=window.__calYear||now.getFullYear(),month=window.__calMonth||(now.getMonth()+1);
+  function render(){
+    const firstDay=new Date(year,month-1,1).getDay();
+    const daysInMonth=new Date(year,month,0).getDate();
+    const daysInPrev=new Date(year,month-1,0).getDate();
+    const todayStr=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
+    const monthStr=year+"-"+String(month).padStart(2,"0");
+    const checkedSet=new Set(history);
+    /* 本月签到天数 */
+    const monthDays=history.filter(d=>d.startsWith(monthStr)).length;
+    const weekdays=["日","一","二","三","四","五","六"];
+    let cells="";
+    /* 上月填充 */
+    for(let i=firstDay-1;i>=0;i--){const d=daysInPrev-i;const ds=(month===1?year-1:year)+"-"+String(month===1?12:month-1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+      cells+=`<div class="cal-day other">${d}</div>`;}
+    /* 本月 */
+    for(let d=1;d<=daysInMonth;d++){const ds=year+"-"+String(month).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+      const isToday=ds===todayStr;const isChecked=checkedSet.has(ds);
+      cells+=`<div class="cal-day${isToday?" today":""}${isChecked?" checked":""}">${d}</div>`;}
+    /* 下月填充 */
+    const totalCells=firstDay+daysInMonth;const remain=(7-totalCells%7)%7;
+    for(let d=1;d<=remain;d++){cells+=`<div class="cal-day other">${d}</div>`;}
+    el.innerHTML=`<div class="cal-wrap"><div class="cal-head">
+    <h3>📅 签到日历</h3><div class="cal-nav">
+    <button id="calPrev">‹ 上月</button>
+    <span style="font-size:14px;font-weight:700;padding:4px 12px">${year} 年 ${month} 月</span>
+    <button id="calNext">下月 ›</button></div></div>
+    <div class="cal-grid">${weekdays.map(w=>`<div class="cal-wday">${w}</div>`).join("")}${cells}</div>
+    <div class="cal-stat"><span>✅ 本月签到 <b>${monthDays}</b> 天</span><span>📅 累计签到 <b>${history.length}</b> 天</span><span>🔥 连续签到 <b>${S.checkin.streak||0}</b> 天</span></div></div>`;
+    document.getElementById("calPrev").onclick=()=>{if(month===1){year--;month=12;}else month--;window.__calYear=year;window.__calMonth=month;render();};
+    document.getElementById("calNext").onclick=()=>{if(month===12){year++;month=1;}else month++;window.__calYear=year;window.__calMonth=month;render();};
+  }
+  render();
+}
+
+/* ---------- 重置 ---------- */
+document.getElementById("resetBtn").onclick=()=>{if(confirm("确定清空所有学习进度并重新开始吗？")){
+localStorage.removeItem(LS_KEY);S=defaultState();renderLevel();renderStreak();chatLog=[];render();}};
+
+/* ============================================================
+ * AI 工具推荐页
+ * ============================================================ */
+const TOOLS=[];
+(function(){const ts=[
+{id:"tool-wb",name:"WorkBuddy",category:"agent-office",tags:["腾讯","办公","agent","桌面智能体","MCP"],summary:"腾讯推出的 AI 原生桌面智能体工作台，本地优先运行，基于 MCP 底座 + Skill 引擎 + 双核跨端架构",description:"WorkBuddy 是腾讯于 2026 年 3 月发布的全场景 AI 桌面智能体。它通过 MCP 安全交互底座实现权限隔离与模型无关接入，中层 Skill 引擎封装了 20+ 预设技能包，应用层支持多任务并行调度与多模态交付。2026 年 8 月 PC 端月访问量约 2097 万，被马化腾称为国内使用最广的效率智能体。",features:["本地运行数据不出域","MCP 底座权限隔离","100+ 领域专家可并行协作","Claw 远程跨端调度","支持企微/钉钉集成","定时任务自动推送交付物"],whyForPM:"办公 Agent 赛道的标杆产品，理解其三层架构（MCP-Skill-应用层）是 AI PM 的必修课。2026 年办公 Agent 三国杀的主角之一，值得持续关注产品迭代方向。",url:"https://workbuddy.tencent.com",rating:4.5},
+{id:"tool-dbw",name:"豆包工作",category:"agent-office",tags:["字节","飞书","办公","agent","多模态","豆包"],summary:"字节跳动面向生产力场景的 AI Agent 产品，深度整合飞书组织上下文与多模态生成能力，48 小时可端到端交付办公任务",description:"豆包工作于 2026 年 8 月 25 日正式发布（此前 6 月已推出办公任务模式），将豆包 C 端交互能力与飞书 B 端组织协作体系深度打通。特色是侧边工作台让执行过程可视可干预，支持指哪改哪的局部编辑。智能体会自动定位群聊、拉取消息流、识别项目文档、查询多维表格，甚至自动 @ 负责人催办。",features:["飞书深度打通：企业知识检索、文档读写、自动催办","侧边工作台：过程可视可干预、指哪改哪","Skill 机制：重复流程沉淀为可复用治理资产","多模态交付：图文视频报告网站","云电脑模式：批量检索学术数据库"],whyForPM:"豆包工作展示了「C 端交互 + B 端组织上下文」的差异化路线，是理解 AI 产品如何与企业生态绑定的最佳案例。",url:"https://doubao.com",rating:4.5},
+{id:"tool-qw",name:"千问办公",category:"agent-office",tags:["阿里","钉钉","办公","agent","标准模式","Qwen"],summary:"阿里一站式 AI 办公平台，深度绑定钉钉生态，标准模式通过模型路由实现 Token 消耗减少 75%",description:"千问办公由 QoderWork、悟空、MuleRun 三款产品整合而来，2026 年 7 月正式上线。基于 Qwen3.8 旗舰模型，2026 年 8 月推出 Qwen3.8-Flash 标准模式（单任务速度+100%，Token-75%）。全栈网页交付能力：不只生成 HTML，还能提供域名和数据库。已接入钉钉、飞书、企业微信三大平台，无需单独安装，通过连接器对话即可操作。",features:["标准/高级双模式：95% 日常任务走轻量模型","全栈网页交付：从生成到发布一站式","三平台连接器：钉钉/飞书/企微全覆盖","一句话交付 PPT/文档/视频/网页","Qwen3.8-Flash 标准模式 Token-75%"],whyForPM:"千问办公的「标准模式」是模型路由产品化的教科书级案例，学成本设计时必看。",url:"https://qwenwork.ai",rating:4.5},
+{id:"tool-chatgpt",name:"ChatGPT",category:"llm-chat",tags:["OpenAI","GPT","对话","多模态","写作"],summary:"OpenAI 旗舰对话模型，2025-2026 年迭代至 GPT-5 系列，支持多模态输入与深度推理",description:"ChatGPT 是 AI 产品经理的日常必备工具，从需求分析、PRD 撰写、原型描述到竞品分析，覆盖整个产品工作流。2026 年版本进一步强化了长上下文推理、多模态理解和代码生成能力，新增 Canvas 协作编辑等产品化功能。",features:["多模态理解：图文音视频输入","深度推理：复杂问题分步分析","Canvas 协作编辑","长上下文处理","插件与 GPTs 生态"],whyForPM:"作为 AI 产品经理的日常效率工具，ChatGPT 的使用深度直接决定了你的工作效率。建议每周至少花 1 小时练习新提示词技巧。",url:"https://chat.openai.com",rating:4.5},
+{id:"tool-claude",name:"Claude",category:"llm-chat",tags:["Anthropic","对话","长文本","代码","分析"],summary:"Anthropic 推出的对话模型，以长上下文窗口和深度分析能力著称，支持 Artifacts 代码生成",description:"Claude 在 2026 年迭代至 Opus 4.5 系列，保持长上下文（200K+ Token）和深度分析能力的领先优势。Artifacts 功能让用户在同一界面内生成可运行的代码/网页，是 AI PM 做原型验证的利器。Claude 的 MCP 协议支持使其成为 Agent 生态的重要组成部分。",features:["超长上下文窗口（200K+ Token）","Artifacts 实时代码/网页生成","深度分析能力","MCP 协议支持","安全性优先的设计哲学"],whyForPM:"Claude 的 Artifacts 功能非常适合快速原型验证——用一句话生成网页 demo，然后发给用户测试。MCP 协议也是 Agent 生态的关键基础设施。",url:"https://claude.ai",rating:4.5},
+{id:"tool-deepseek",name:"DeepSeek",category:"llm-chat",tags:["深度求索","推理","代码","数学","性价比"],summary:"国产推理模型代表，以极致的性价比和深度推理能力在 2025-2026 年快速崛起",description:"DeepSeek 凭借其深度推理模型在 AI 圈快速崛起，2026 年版本在推理能力上跻身全球第一梯队，同时保持极具竞争力的价格。在代码、数学、逻辑推理等场景表现突出，是国产模型在硬核推理赛道的标杆。",features:["深度推理能力","极高性价比","代码生成与理解","数学与逻辑推理","开源模型生态"],whyForPM:"DeepSeek 是国产模型「卷推理」的代表，价格低、效果好，适合成本敏感型产品。做技术选型时的必选项。",url:"https://deepseek.com",rating:4.5},
+{id:"tool-coze",name:"Coze（扣子）",category:"agent-platform",tags:["字节","Agent","工作流","bot","插件"],summary:"字节跳动推出的零代码 AI Bot 开发平台，支持工作流编排、插件扩展、知识库接入",description:"Coze 是当前国内最主流的零代码 AI Agent 搭建平台，支持拖拽式工作流编排、多插件接入、知识库管理、定时任务触发。2026 年版本进一步强化了多智能体协作和 MCP 接入能力，是 AI PM 快速验证产品想法的首选工具。",features:["零代码工作流编排","多插件接入","知识库管理","多智能体协作","定时任务触发","一键发布到多平台"],whyForPM:"Coze 是 AI PM 的「原型神器」——1 小时能从想法到可用的 Bot。学习计划 W5-6 的 demo 阶段首选工具。",url:"https://www.coze.cn",rating:4.5},
+{id:"tool-dify",name:"Dify",category:"agent-platform",tags:["开源","LLM","编排","RAG","Agent"],summary:"开源的 LLM 应用开发平台，支持 RAG 管道、Agent 编排、模型路由、评估闭环",description:"Dify 是开源 LLM 应用平台的标杆，提供了从数据接入、RAG 管道构建、Agent 编排到应用发布的完整工作流。2026 年版本强化了评估闭环和模型路由功能，是企业级 AI 应用开发的主流选择之一。与 Coze 相比，Dify 更偏向开发者，但灵活性更高。",features:["开源可自部署","RAG 管道与 Embedding 管理","Agent 编排与工具调用","评估闭环与测试集管理","模型路由与成本控制"],whyForPM:"理解 Dify 的架构有助于你理解 AI 产品的技术实现全貌。建议至少在上面跑通一个 RAG 应用，体验完整链路。",url:"https://dify.ai",rating:4.5},
+{id:"tool-perplexity",name:"Perplexity",category:"search",tags:["AI搜索","深度研究","引用","调研"],summary:"AI 搜索引擎，提供带引用来源的深度研究结果，是 AI PM 做竞品调研和行业分析的首选工具",description:"Perplexity 将搜索引擎与 LLM 能力结合，提供带详细引用来源的深度研究结果。2026 年版本进一步强化了深度研究模式（Pro Search），可自动生成结构化研究报告。对于 AI PM 的日常调研工作，Perplexity 比传统搜索效率高 3-5 倍。",features:["带引用来源的回答","深度研究模式","多步推理搜索","文档上传分析","专题研究空间"],whyForPM:"做竞品分析、行业调研、技术趋势追踪时，Perplexity 比传统搜索快 3-5 倍。建议作为 AI PM 的标准调研工具。",url:"https://www.perplexity.ai",rating:4.5},
+{id:"tool-kimi",name:"Kimi",category:"llm-chat",tags:["月之暗面","长文本","对话","中文","分析"],summary:"国内长文本对话模型先驱，以超长上下文窗口和优质中文表现著称",description:"Kimi 专注于长文本理解和深度对话，在中文语境下表现优异。2026 年版本在长文档处理、多轮对话和复杂分析任务上持续迭代。其「长文总结」和「深度分析」场景是很多 AI PM 的日常高频使用场景。",features:["超长上下文处理","优质中文理解","长文总结与深度分析","多轮复杂对话","文件上传分析"],whyForPM:"Kimi 是国产长文本模型代表，适合做长文档分析、合同审查、行业报告解读等场景。做长文本产品时，Kimi 是重要的参考对标。",url:"https://kimi.moonshot.cn",rating:4.5},
+{id:"tool-cursor",name:"Cursor",category:"dev",tags:["AI编程","IDE","开发","代码","生成"],summary:"AI-first 代码编辑器，内置多模型支持，可理解和修改整个代码库",description:"Cursor 是 AI 原生编程工具的代表，基于 VS Code 架构，内置 GPT-4/Claude/DeepSeek 等多模型支持。2026 年版本进一步强化了「整个代码库理解」能力，能根据上下文自动修改代码、修复 bug、重构模块。对于 AI PM 来说，虽然不写代码，但理解 Cursor 的能力边界对评估 AI 编程产品至关重要。",features:["多模型内置支持","整个代码库理解","自动代码生成与修改","Bug 自动修复","上下文感知重构"],whyForPM:"AI 编程工具是 AI PM 必了解的产品品类。理解 Cursor 的能力边界有助于你在评估 AI 编程产品时做出准确判断。",url:"https://www.cursor.com",rating:4.5}
+];ts.forEach(t=>{if(!TOOLS.some(x=>x.id===t.id))TOOLS.push(t)});})();
+const TOOL_CATS={
+  "llm-chat":"对话与LLM","agent-office":"Agent与办公","agent-platform":"Agent平台","dev":"开发与部署","search":"搜索与研究","design":"设计与创意"
+};
+let toolsFilter="all";
+function renderTools(el){
+  const today=new Date();const pickIdx=((today.getFullYear()*10000+today.getMonth()*100+today.getDate())%Math.max(TOOLS.length,1));
+  const pick=TOOLS[pickIdx];
+  const catBtns=["all",...Object.keys(TOOL_CATS)].map(d=>{
+    const label=d==="all"?"全部":TOOL_CATS[d];
+    return `<button class="fbtn ${toolsFilter===d?"active":""}" data-f="${d}">${label}</button>`;}).join("");
+  el.innerHTML=`<div class="page"><div class="page-head"><h2>🧰 AI 工具推荐</h2>
+  <p>每日推荐一款最好用的 AI 工具，帮助你持续了解行业最新武器。工具由每日自动更新持续补充。</p></div>
+  ${pick?`<div class="tool-pick"><div class="pick-label">🌟 今日推荐</div>
+  <div class="pick-card" data-id="${pick.id}"><div class="pick-top">
+  <span class="pick-cat">${TOOL_CATS[pick.category]||pick.category}</span>
+  <span class="pick-rating">${"★".repeat(Math.round(pick.rating||4))}${"☆".repeat(5-Math.round(pick.rating||4))}</span></div>
+  <h3>${pick.name}</h3><p>${pick.summary||""}</p>
+  <div class="pick-tags">${pick.tags.slice(0,4).map(t=>"#"+t).join(" ")}</div></div></div>`:""}
+  <div class="toolbar" style="margin-top:16px">${catBtns}</div>
+  <div class="grid" id="toolGrid">${TOOLS.filter(t=>toolsFilter==="all"||t.category===toolsFilter).map(t=>`<div class="tcard" data-id="${t.id}">
+  <span class="tcat" style="color:${["#6366f1","#10b981","#f59e0b","#06b6d4","#ec4899","#8b5cf6"][Object.keys(TOOL_CATS).indexOf(t.category)%6]};background:rgba(99,102,241,.12)">${TOOL_CATS[t.category]||t.category}</span>
+  <h3>${t.name}</h3><p>${(t.summary||"").slice(0,60)}…</p>
+  <div class="meta"><span>${t.tags.slice(0,2).map(tg=>"#"+tg).join(" ")}</span><span>⭐ ${t.rating||"—"}</span></div></div>`).join("")}</div></div>`;
+  el.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{toolsFilter=b.dataset.f;render();});
+  el.querySelectorAll(".pick-card,.tcard").forEach(c=>c.onclick=()=>openTool(c.dataset.id));}
+/* ============================================================
+ * 费用明细
+ * ============================================================ */
+function renderCost(el){
+  const logs=JSON.parse(localStorage.getItem("aipm_llm_logs")||"[]");
+  const activeCfg=getActiveLlmConfig();
+  const budget=activeCfg?activeCfg.budget:0;
+  /* 提取所有出现的平台/模型 */
+  const providers=[...new Set(logs.map(l=>l.provider||"unknown"))];
+  const models=[...new Set(logs.map(l=>l.model||"unknown"))];
+  const labels=[...new Set(logs.map(l=>l.label||""))].filter(Boolean);
+  const allFilters=[{id:"all",label:"全部"}];
+  providers.forEach(p=>{let label="";if(p==="deepseek")label="DeepSeek";else if(p==="openai")label="OpenAI";else if(p==="custom")label="自定义";else label=p;allFilters.push({id:"p:"+p,label:label});});
+  models.forEach(m=>{allFilters.push({id:"m:"+m,label:m});});
+  labels.forEach(l=>{allFilters.push({id:"l:"+l,label:"🏷️ "+l});});
+  const filterKey=(window.__costFilter)||"all";
+  /* 按过滤条件筛选日志 */
+  const filteredLogs=filterKey==="all"?logs:filterKey.startsWith("p:")?logs.filter(l=>l.provider===filterKey.slice(2)):filterKey.startsWith("m:")?logs.filter(l=>l.model===filterKey.slice(2)):filterKey.startsWith("l:")?logs.filter(l=>l.label===filterKey.slice(2)):logs;
+  const fCalls=filteredLogs.length;const fPrompt=filteredLogs.reduce((s,l)=>s+(l.usage?.prompt_tokens||0),0);
+  const fComp=filteredLogs.reduce((s,l)=>s+(l.usage?.completion_tokens||0),0);
+  const fCost=filteredLogs.reduce((s,l)=>s+(l.cost||0),0);const fCostCNY=fCost*7.2;
+  const totalCostCNY=logs.reduce((s,l)=>s+(l.cost||0),0)*7.2;
+  const remaining=budget>0?Math.max(0,budget-totalCostCNY):-1;
+  const filterBtns=allFilters.map(f=>`<button class="fbtn ${filterKey===f.id?"active":""}" data-cf="${f.id}">${f.label}</button>`).join("");
+  el.innerHTML=`<div class="page"><div class="page-head"><h2>💰 AI 教练费用明细</h2>
+  <p>每次大模型调用的 Token 消耗与花费明细，数据仅存本地浏览器。</p></div>
+  <div class="toolbar">${filterBtns}</div>
+  <div class="dash">
+  <div class="dcard"><div class="num">${fCalls||0}</div><div class="lbl">${filterKey==="all"?"总调用次数":"筛选后调用次数"}</div></div>
+  <div class="dcard"><div class="num">${(fPrompt+fComp).toLocaleString()}</div><div class="lbl">${filterKey==="all"?"总 Tokens":"筛选后 Tokens"}</div></div>
+  <div class="dcard"><div class="num" style="background:linear-gradient(120deg,#f59e0b,#fbbf24);-webkit-background-clip:text;background-clip:text;color:transparent">¥${fCostCNY.toFixed(4)}</div><div class="lbl">${filterKey==="all"?"总花费（约）":"筛选后花费"}</div></div>
+  ${budget>0?`<div class="dcard"><div class="num" style="color:${remaining<budget*0.2?'#ef4444':'#10b981'}">¥${remaining.toFixed(2)}</div><div class="lbl">本月预算剩余（¥${budget}）</div></div>
+  <div class="dcard" style="grid-column:span 2"><div class="progress-thin" style="margin:0"><i style="width:${Math.min(100,(totalCostCNY/budget)*100)}%;background:${totalCostCNY>budget*0.8?'#ef4444':'#f59e0b'}"></i></div><div class="lbl" style="margin-top:2px">已用 ${Math.min(100,(totalCostCNY/budget)*100).toFixed(1)}% 预算</div></div>`:""}
+  </div>
+  ${filteredLogs.length?`<h3 style="margin:18px 0 10px">📋 调用明细（${filteredLogs.length} 条）<button class="fbtn" id="exportCostBtn" style="margin-left:12px;font-size:11.5px">📥 导出 JSON</button></h3>
+  <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+  <thead><tr style="background:var(--card);border-bottom:2px solid var(--line)">${["时间","标识","模型","平台","问题","AI 回答","输入Tokens","输出Tokens","花费"].map(h=>`<th style="padding:10px 8px;text-align:left;color:var(--tx2);font-weight:700">${h}</th>`).join("")}</tr></thead>
+  <tbody>${filteredLogs.slice(0,200).map(l=>{
+    const qShort=(l.q||"").slice(0,100);const aShort=(l.a||"").slice(0,100);
+    return `<tr style="border-bottom:1px solid var(--line)">
+  <td style="padding:8px;color:var(--tx3);white-space:nowrap">${(l.ts||"").slice(0,19).replace("T"," ")}</td>
+  <td style="padding:8px;color:var(--green2);font-weight:600">${l.label||""}</td>
+  <td style="padding:8px;color:var(--tx2)">${l.model||""}</td>
+  <td style="padding:8px;color:var(--tx2)">${l.provider||""}</td>
+  <td style="padding:8px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx);cursor:pointer" title="${(l.q||"").replace(/"/g,"&quot;")}">${qShort}${(l.q||"").length>10?"<span style=\"color:var(--tx3)\">…</span>":""}</td>
+  <td style="padding:8px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx2);cursor:pointer" title="${(l.a||"").replace(/"/g,"&quot;")}">${aShort}${(l.a||"").length>10?"<span style=\"color:var(--tx3)\">…</span>":""}</td>
+  <td style="padding:8px;text-align:right;color:var(--tx2)">${l.usage?.prompt_tokens||0}</td>
+  <td style="padding:8px;text-align:right;color:var(--tx2)">${l.usage?.completion_tokens||0}</td>
+  <td style="padding:8px;text-align:right;color:var(--amber);font-weight:700">¥${((l.cost||0)*7.2).toFixed(6)}</td>
+  </tr>`;}).join("")}</tbody></table></div>`:`<div class="empty" style="padding:40px 0">暂无调用记录，配置大模型并提问后这里会显示明细</div>`}
+  <div style="margin-top:16px;font-size:12px;color:var(--tx3);text-align:center">💡 预算可在 个人信息 → AI 教练配置 中设置 · 点击筛选按钮查看不同平台的费用明细 · 鼠标悬停在问题/回答上可查看完整内容</div></div>`;
+  el.querySelectorAll("[data-cf]").forEach(b=>b.onclick=()=>{window.__costFilter=b.dataset.cf;render();});
+  const expBtn=document.getElementById("exportCostBtn");
+  if(expBtn)expBtn.onclick=()=>{const blob=new Blob([JSON.stringify(logs,null,2)],{type:"application/json"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="aipm_cost_logs_"+new Date().toISOString().slice(0,10)+".json";
+    a.click();toast("✅ 已导出 "+logs.length+" 条调用记录");};}
+function openTool(id){
+  const t=TOOLS.find(x=>x.id===id);if(!t)return;
+  const catColor=["#6366f1","#10b981","#f59e0b","#06b6d4","#ec4899","#8b5cf6"][Object.keys(TOOL_CATS).indexOf(t.category)%6];
+  document.getElementById("modalBox").innerHTML=`<button class="x" onclick="closeModal()">✕</button>
+  <span style="color:${catColor};background:rgba(99,102,241,.12);display:inline-block;padding:4px 11px;border-radius:99px;font-size:12px;font-weight:700">${TOOL_CATS[t.category]||t.category}</span>
+  <h3 style="margin-top:10px">${t.name}</h3>
+  <div class="sub">${t.tags.map(tg=>"#"+tg).join(" ")} · ⭐ ${"★".repeat(Math.round(t.rating||4))}${"☆".repeat(5-Math.round(t.rating||4))}</div>
+  <div class="modal-body"><h4>工具简介</h4><p>${t.description||t.summary||""}</p>
+  ${t.features?`<h4>核心功能</h4><ul>${t.features.map(f=>"<li>"+f+"</li>").join("")}</ul>`:""}
+  ${t.whyForPM?`<h4>为什么 AI PM 值得关注</h4><p>${t.whyForPM}</p>`:""}</div>
+  <div class="modal-actions">${t.url?`<a class="btn btn-primary" href="${t.url}" target="_blank">🔗 访问官网</a>`:""}
+  <button class="btn btn-ghost" onclick="closeModal()">关闭</button></div>`;
+  document.getElementById("modal").classList.add("show");document.getElementById("modalBox").scrollTop=0;}
+
+/* ============================================================
+ * 自我进化机制：知识包（Knowledge Pack）热插拔
+ * 新趋势以独立 .js 数据包注入，不改主程序。
+ * 用法：把知识包放入 packs/ 目录，并在 packs/manifest.js
+ * 的 PACK_MANIFEST 数组里登记文件名即可。
+ * ============================================================ */
+window.__PACKS=[];
+window.registerKnowledgePack=function(pack){
+  if(!pack||!pack.id)return;
+  if(window.__PACKS.some(p=>p.id===pack.id))return;
+  (pack.kb||[]).forEach(k=>{k.domain=k.domain||"trend";k.packDate=(pack.meta&&pack.meta.date)||"";KB.push(k);});
+  (pack.quiz||[]).forEach(q=>{q.domain=q.domain||"trend";QUIZ.push(q);});
+  (pack.interview||[]).forEach(q=>{q.domain=q.domain||"trend";INTERVIEW.push(q);});
+  (pack.hints||[]).forEach(h=>{TOPIC_HINTS.unshift(h);});
+  (pack.tools||[]).forEach(t=>{if(!TOOLS.some(x=>x.id===t.id))TOOLS.push(t);});
+  window.__PACKS.push(pack);
+};
+function loadPacksSequentially(list,done){let i=0;(function next(){if(i>=list.length)return done();
+  const s=document.createElement("script");s.src="packs/"+list[i++];
+s.onload=next;s.onerror=next;document.head.appendChild(s);})();}
+
+function initApp(){touchStreak();buildNav();go("chat");renderLevel();renderStreak();renderCheckinBtn();
+/* 清理空会话（没有消息的） */
+const idx=getSessionIndex();const valid=idx.filter(s=>{const msgs=loadSessionMessages(s.id);return msgs.length>1;});
+if(valid.length!==idx.length){saveSessionIndex(valid);idx.forEach(s=>{if(!valid.find(v=>v.id===s.id))localStorage.removeItem("aipm_chat_"+s.id);});}
+const pv=document.getElementById("packDateVal");
+if(pv){const d=latestPackDate();pv.textContent=d?("更新至 "+d):"内置";}
+document.getElementById("logoutBtn").onclick=doLogout;
+document.getElementById("checkinBtn").onclick=doCheckin;
+console.log("[代练系统] 已加载知识包 "+window.__PACKS.length+" 个。");}
+
+/* ============================================================
+ * 登录门禁：账号密码验证（凭据与登录态均存本机浏览器）
+ * 首次进入先创建账号，之后每次进入需登录。
+ * ============================================================ */
+const AUTH_KEY="aipm_auth_v1", SESSION_KEY="aipm_session_v1";
+function hashPwd(user,pwd){ /* 本地散列存储，不落明文 */
+  const str=user+"::"+pwd;let h1=0xdeadbeef,h2=0x41c6ce57;
+  for(let i=0;i<str.length;i++){const ch=str.charCodeAt(i);
+    h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677);}
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);
+  h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  return (4294967296*(2097151&h2)+(h1>>>0)).toString(36)+str.length.toString(36);}
+function getAuth(){try{return JSON.parse(localStorage.getItem(AUTH_KEY));}catch(e){return null;}}
+function getSession(){try{return JSON.parse(localStorage.getItem(SESSION_KEY));}catch(e){return null;}}
+function sessionValid(){const a=getAuth(),s=getSession();return !!(a&&s&&s.user===a.user);}
+function setSession(user){localStorage.setItem(SESSION_KEY,JSON.stringify({user:user,ts:Date.now()}));}
+
+function authErr(msg){const e=document.getElementById("authErr");if(e){e.textContent=msg;e.classList.add("show");}}
+function renderAuthForm(){
+  const g=document.getElementById("authGate");const a=getAuth();
+  if(!a){ /* 首次：创建账号 */
+    g.innerHTML=`<div class="auth-card"><div class="auth-logo">PM</div>
+      <div class="auth-title">首次使用 · 创建学习账号</div>
+      <div class="auth-sub">账号密码仅保存在本机浏览器，用于进入代练系统</div>
+      <div class="auth-field"><label>账号</label><input class="auth-input" id="regUser" maxlength="20" placeholder="2-20 位，建议用你的常用名"></div>
+      <div class="auth-field"><label>密码</label><input class="auth-input" id="regPass" type="password" maxlength="32" placeholder="至少 4 位"></div>
+      <div class="auth-field"><label>确认密码</label><input class="auth-input" id="regPass2" type="password" maxlength="32" placeholder="再输入一次"></div>
+      <button class="auth-btn" id="authBtn">创建并进入系统</button>
+      <div class="auth-err" id="authErr"></div>
+      <div class="auth-note">离线系统提示：账号只存在于这台电脑的浏览器里。<br>忘记密码只能重置账号（学习进度会一并清空）。</div></div>`;
+    const submit=()=>{const u=document.getElementById("regUser").value.trim();
+      const p=document.getElementById("regPass").value,p2=document.getElementById("regPass2").value;
+      if(u.length<2)return authErr("账号至少 2 位。");
+      if(p.length<4)return authErr("密码至少 4 位。");
+      if(p!==p2)return authErr("两次输入的密码不一致。");
+      localStorage.setItem(AUTH_KEY,JSON.stringify({user:u,hash:hashPwd(u,p)}));
+      setSession(u);enterSystem();};
+    document.getElementById("authBtn").onclick=submit;
+    ["regUser","regPass","regPass2"].forEach(id=>document.getElementById(id).addEventListener("keydown",e=>{if(e.key==="Enter")submit();}));
+  }else{ /* 已注册：登录 */
+    g.innerHTML=`<div class="auth-card"><div class="auth-logo">PM</div>
+      <div class="auth-title">AI 产品经理代练系统</div>
+      <div class="auth-sub">登录后继续学习 · 上次账号：<b>${a.user}</b></div>
+      <div class="auth-field"><label>账号</label><input class="auth-input" id="logUser" maxlength="20" value="${a.user}"></div>
+      <div class="auth-field"><label>密码</label><input class="auth-input" id="logPass" type="password" maxlength="32" placeholder="输入密码"></div>
+      <button class="auth-btn" id="authBtn">进入系统</button>
+      <div class="auth-err" id="authErr"></div>
+      <div class="auth-note"><span class="forgot-link" onclick="showForgotPassword()">找回密码</span> · <a href="javascript:void(0)" id="resetAuth" style="color:var(--indigo2)">重置账号</a>（清空进度与账号）</div></div>`;
+    const submit=()=>{const u=document.getElementById("logUser").value.trim();
+      const p=document.getElementById("logPass").value;
+      if(!u||!p)return authErr("请输入账号和密码。");
+      if(u===a.user&&hashPwd(u,p)===a.hash){setSession(u);enterSystem();}
+      else authErr("账号或密码错误，请重试。");};
+    document.getElementById("authBtn").onclick=submit;
+    ["logUser","logPass"].forEach(id=>document.getElementById(id).addEventListener("keydown",e=>{if(e.key==="Enter")submit();}));
+    document.getElementById("logPass").focus();
+    document.getElementById("resetAuth").onclick=()=>{
+      if(confirm("重置账号将删除账号密码并清空全部学习进度，且无法恢复。确定继续吗？")){
+        localStorage.removeItem(AUTH_KEY);localStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem(LS_KEY);S=defaultState();chatLog=[];renderAuthForm();}};
+  }
+}
+let __appInited=false;
+function enterSystem(){document.getElementById("authGate").style.display="none";
+  const app=document.getElementById("appRoot");app.style.display="flex";
+  const a=getAuth();const uv=document.getElementById("userVal");if(uv&&a)uv.textContent=a.user;
+  if(uv)uv.onclick=openProfile;if(uv)uv.style.cursor="pointer";
+  if(!__appInited){__appInited=true;initApp();}}
+function showGate(){document.getElementById("appRoot").style.display="none";
+  document.getElementById("authGate").style.display="flex";renderAuthForm();}
+function doLogout(){localStorage.removeItem(SESSION_KEY);showGate();}
+
+/* ============================================================
+ * 个人信息中心：账号修改、邮箱绑定、安全问答、密码找回
+ * ============================================================ */
+const SECURITY_QS=["你的小学名称是什么？","你的出生城市是哪里？","你最喜欢的宠物名字是什么？","你的第一份工作公司名称是什么？","你母亲的职业是什么？"];
+function openProfile(){
+  const a=getAuth();if(!a)return;
+  const llm=JSON.parse(localStorage.getItem("aipm_llm_config")||"{}");
+  const llmProviders=[{v:"openai",l:"OpenAI"},{v:"deepseek",l:"DeepSeek"},{v:"custom",l:"自定义"}];
+  const llmModels={openai:["gpt-4o","gpt-4o-mini","gpt-4-turbo"],deepseek:["deepseek-v4-flash","deepseek-v4-pro","deepseek-chat-legacy"],custom:["自定义模型"]};
+  const selP=llm.provider||"openai";const selM=llm.model||"gpt-4o-mini";
+  document.getElementById("modalBox").innerHTML=`<button class="x" onclick="closeModal()">✕</button>
+  <h3 style="margin-bottom:4px">👤 个人信息</h3><div class="sub" style="margin-bottom:16px">管理你的账号与安全设置</div>
+  <div class="profile-field"><label>账号名</label><input class="auth-input" id="pfUser" value="${a.user}" maxlength="20"></div>
+  <div class="profile-field"><label>绑定邮箱（用于找回密码）</label><input class="auth-input" id="pfEmail" value="${a.email||''}" placeholder="选填，绑定后可用邮箱找回密码" maxlength="60"></div>
+  <div class="profile-field"><label>密保问题</label><select class="auth-input" id="pfSq">${SECURITY_QS.map((q,i)=>`<option value="${i}" ${a.sq==i?"selected":""}>${q}</option>`).join("")}</select></div>
+  <div class="profile-field"><label>密保答案</label><input class="auth-input" id="pfSa" value="${a.sa?"••••••":""}" placeholder="设置或修改密保答案" maxlength="40"></div>
+  <div class="profile-field"><label>修改密码（如不改留空）</label><input class="auth-input" id="pfOldP" type="password" placeholder="当前密码"></div>
+  <div class="profile-field" style="margin-top:-6px"><input class="auth-input" id="pfNewP" type="password" placeholder="新密码（留空则不修改）" maxlength="32"></div>
+  <div class="profile-field"><input class="auth-input" id="pfNewP2" type="password" placeholder="确认新密码" maxlength="32"></div>
+  <hr style="border-color:var(--line);margin:16px 0"><h4 style="margin-bottom:8px">🤖 AI 教练配置 · 多 API Key 管理</h4>
+  <div class="profile-field" style="margin-bottom:6px"><label>免费模型一键配置</label>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+  <button class="chip" data-preset="deepseek" style="font-size:12px">DeepSeek 免费</button>
+  <button class="chip" data-preset="qwen" style="font-size:12px">通义千问免费</button>
+  <button class="chip" data-preset="glm" style="font-size:12px">智谱 GLM 免费</button>
+  </div>
+  <div style="font-size:11px;color:var(--tx3);margin-top:4px">点击上方按钮自动填入，去对应平台注册即可获取免费 Key</div></div>
+  <div id="keyList" style="margin-bottom:10px"></div>
+  <div id="keyEditor" style="background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px;margin-bottom:10px;display:none">
+  <div style="font-size:13px;font-weight:700;margin-bottom:10px" id="keyEditorTitle">✏️ 添加 API Key</div>
+  <div class="profile-field"><label>标识名称</label><input class="auth-input" id="keLabel" placeholder="如：我的 DeepSeek、公司 OpenAI" maxlength="30"></div>
+  <div class="profile-field"><label>API 提供商</label><select class="auth-input" id="keProvider"><option value="deepseek">DeepSeek</option><option value="openai">OpenAI</option><option value="custom">自定义（兼容 OpenAI 格式）</option></select></div>
+  <div class="profile-field"><label>API Key</label><input class="auth-input" id="keApiKey" placeholder="从平台复制 Key 粘贴到这里" maxlength="120"><div class="profile-hint">你的 Key 仅存本机浏览器，不会上传到任何服务器</div></div>
+  <div class="profile-field"><label>模型名称</label><input class="auth-input" id="keModel" placeholder="如：deepseek-v4-flash / gpt-4o-mini" maxlength="60"></div>
+  <div class="profile-field"><label>API 地址（可选，自定义模式必填）</label><input class="auth-input" id="keApiUrl" placeholder="https://api.xxx.com/v1/chat/completions" maxlength="200"></div>
+  <div class="profile-field"><label>月预算上限 ¥（0 为不限制）</label><input class="auth-input" id="keBudget" type="number" min="0" step="0.5" value="0" placeholder="0 表示不限制"></div>
+  <div class="auth-err" id="keErr"></div>
+  <div class="modal-actions" style="margin-top:8px"><button class="btn btn-primary" id="keSaveBtn">💾 保存 Key</button><button class="btn btn-ghost" id="keCancelBtn">取消</button><button class="btn btn-ghost" id="keTestBtn">🔌 测试连接</button></div></div>
+  <button class="btn btn-ghost" id="addKeyBtn" style="font-size:12.5px;padding:8px 14px;width:100%">➕ 添加新 API Key</button>
+  <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:12px 14px;margin-top:10px;font-size:12.5px;line-height:1.7;color:#b0e6d5">
+  <b>💰 免费模型获取方式：</b><br>
+  • <a href="https://platform.deepseek.com" target="_blank" style="color:var(--green2)">DeepSeek</a>：注册送 500 万 tokens，选 DeepSeek 填入 Key<br>
+  • <a href="https://bailian.console.aliyun.com" target="_blank" style="color:var(--green2)">通义千问</a>：阿里云百炼免费额度，选「自定义」填地址和 Key<br>
+  • <a href="https://open.bigmodel.cn" target="_blank" style="color:var(--green2)">智谱 GLM</a>：注册送体验额度，选「自定义」填地址和 Key</div>
+  <div class="auth-err" id="pfErr" style="margin-top:10px"></div>
+  <div class="modal-actions" style="margin-top:14px"><button class="btn btn-primary" id="pfSaveBtn">💾 保存账号信息</button><button class="btn btn-ghost" onclick="closeModal()">关闭</button></div>`;
+  document.getElementById("modal").classList.add("show");document.getElementById("modalBox").scrollTop=0;
+  /* 渲染已有 Key 列表 */
+  renderKeyList();
+  /* 预设一键配置 */
+  document.querySelectorAll("[data-preset]").forEach(b=>b.onclick=()=>{
+    const p=b.dataset.preset;
+    const presets={deepseek:{provider:"deepseek",model:"deepseek-v4-flash",label:"DeepSeek",url:"https://api.deepseek.com",key:""},
+      qwen:{provider:"custom",model:"qwen-turbo-latest",label:"通义千问",url:"https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",key:""},
+      glm:{provider:"custom",model:"glm-4-flash",label:"智谱 GLM",url:"https://open.bigmodel.cn/api/paas/v4/chat/completions",key:""}};
+    const cfg=presets[p];if(!cfg)return;
+    document.getElementById("keProvider").value=cfg.provider;
+    document.getElementById("keModel").value=cfg.model;
+    document.getElementById("keLabel").value=cfg.label;
+    document.getElementById("keApiUrl").value=cfg.url;
+    document.getElementById("keApiKey").focus();
+    document.getElementById("keyEditor").style.display="block";
+    document.getElementById("keyEditorTitle").textContent="✏️ 添加 API Key（已填入 "+p+" 配置）";
+    window.__editingKeyId=null;
+    toast("✅ 已填入 "+p+" 配置，请粘贴 API Key 后保存");});
+  /* 保存 Key */
+  document.getElementById("keSaveBtn").onclick=()=>{
+    const label=document.getElementById("keLabel").value.trim();
+    const provider=document.getElementById("keProvider").value;
+    const apiKey=document.getElementById("keApiKey").value.trim();
+    const model=document.getElementById("keModel").value.trim();
+    const apiUrl=document.getElementById("keApiUrl").value.trim();
+    const budget=parseFloat(document.getElementById("keBudget").value)||0;
+    if(!label)return keErr("请输入标识名称");
+    if(!apiKey)return keErr("请输入 API Key");
+    if(!model)return keErr("请输入模型名称");
+    const keys=getLlmKeys();const editId=window.__editingKeyId;
+    if(editId){const idx=keys.findIndex(k=>k.id===editId);if(idx>=0)keys[idx]={...keys[idx],label,provider,apiKey,model,apiUrl,budget};}
+    else{keys.push({id:"key_"+Date.now(),label,provider,apiKey,model,apiUrl,budget});}
+    saveLlmKeys(keys);
+    if(!getActiveKeyId())setActiveKeyId(keys[keys.length-1].id);
+    window.__editingKeyId=null;document.getElementById("keyEditor").style.display="none";
+    renderKeyList();closeModal();toast("✅ 已保存「"+label+"」");};
+  document.getElementById("keCancelBtn").onclick=()=>{window.__editingKeyId=null;document.getElementById("keyEditor").style.display="none";};
+  /* 测试连接 */
+  document.getElementById("keTestBtn").onclick=async function(){
+    const key=document.getElementById("keApiKey").value.trim();
+    const provider=document.getElementById("keProvider").value;
+    const model=document.getElementById("keModel").value.trim();
+    const apiUrl=document.getElementById("keApiUrl").value.trim();
+    const url=provider==="custom"&&apiUrl?apiUrl:
+      (provider==="deepseek"?"https://api.deepseek.com/chat/completions":"https://api.openai.com/v1/chat/completions");
+    if(!key)return keErr("请先填入 API Key");
+    this.textContent="⏳ 测试中…";this.disabled=true;
+    try{
+      const resp=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+        body:JSON.stringify({model:model,messages:[{role:"user",content:"Hi"}],max_tokens:5,temperature:0.1}),
+        signal:AbortSignal.timeout(15000)});
+      if(resp.ok){this.textContent="✅ 连接成功";setTimeout(()=>{this.textContent="🔌 测试连接";this.disabled=false;},2000);}
+      else{const err=await resp.text();this.textContent="❌ 失败";setTimeout(()=>{this.textContent="🔌 测试连接";this.disabled=false;},3000);
+        keErr("API 返回错误 "+resp.status+"："+err.slice(0,120));}
+    }catch(e){this.textContent="❌ 失败";setTimeout(()=>{this.textContent="🔌 测试连接";this.disabled=false;},3000);
+      keErr("连接失败："+(e.message||"未知错误").slice(0,120));}};
+  /* 添加 Key 按钮 */
+  document.getElementById("addKeyBtn").onclick=()=>{
+    window.__editingKeyId=null;document.getElementById("keyEditor").style.display="block";
+    document.getElementById("keyEditorTitle").textContent="✏️ 添加 API Key";
+    document.getElementById("keLabel").value="";document.getElementById("keProvider").value="deepseek";
+    document.getElementById("keApiKey").value="";document.getElementById("keModel").value="";
+    document.getElementById("keApiUrl").value="";document.getElementById("keBudget").value="0";
+    document.getElementById("keErr").classList.remove("show");};
+  /* 保存账号信息 */
+  document.getElementById("pfSaveBtn").onclick=()=>{
+    const nu=document.getElementById("pfUser").value.trim();if(nu.length<2)return pfErr("账号至少 2 位");
+    const ne=document.getElementById("pfEmail").value.trim();
+    const nsq=parseInt(document.getElementById("pfSq").value);
+    const nsa=document.getElementById("pfSa").value.trim();
+    const op=document.getElementById("pfOldP").value;
+    const np=document.getElementById("pfNewP").value;
+    const np2=document.getElementById("pfNewP2").value;
+    if(np&&np.length<4)return pfErr("新密码至少 4 位");
+    if(np&&np!==np2)return pfErr("两次新密码不一致");
+    if(np&&hashPwd(a.user,op)!==a.hash)return pfErr("当前密码不正确");
+    const newHash=np?hashPwd(nu,np):a.hash;
+    const newSa=nsa?hashPwd(nu,"sa"+nsa):a.sa;
+    const na={user:nu,hash:newHash,email:ne||"",sq:nsq,sa:newSa};
+    localStorage.setItem(AUTH_KEY,JSON.stringify(na));
+    if(nu!==a.user||np){localStorage.setItem(SESSION_KEY,JSON.stringify({user:nu,ts:Date.now()}));}
+    const uv=document.getElementById("userVal");if(uv)uv.textContent=nu;
+    closeModal();toast("✅ 个人信息已保存");};
+  /* 渲染 Key 列表 */
+  function renderKeyList(){
+    const keys=getLlmKeys();const activeId=getActiveKeyId();
+    const el=document.getElementById("keyList");
+    if(!keys.length){el.innerHTML='<div style="font-size:12px;color:var(--tx3);padding:10px;text-align:center;border:1px dashed var(--line);border-radius:10px">暂无配置，点击下方按钮添加</div>';return;}
+    el.innerHTML=keys.map(k=>{
+      const providerLabel={deepseek:"DeepSeek",openai:"OpenAI",custom:"自定义"}[k.provider]||k.provider;
+      const isActive=k.id===activeId;
+      return `<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid ${isActive?'var(--green)':'var(--line)'};border-radius:11px;margin-bottom:6px;background:${isActive?'rgba(16,185,129,.06)':'transparent'}">
+      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;color:${isActive?'var(--green2)':'var(--tx)'}">${k.label} ${isActive?'✅ 当前使用':''}</div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:1px">${providerLabel} · ${k.model}${k.budget?' · 预算 ¥'+k.budget:''}</div></div>
+      <button class="chip" data-set="${k.id}" style="font-size:11px;color:${isActive?'var(--tx3)':'var(--green2)'};padding:3px 8px" ${isActive?'disabled':''}>${isActive?'已选中':'设为当前'}</button>
+      <button class="chip" data-edit="${k.id}" style="font-size:11px;padding:3px 8px">✏️</button>
+      <button class="chip" data-del="${k.id}" style="font-size:11px;color:var(--red);padding:3px 8px">🗑️</button></div>`;
+    }).join("");
+    /* 绑定事件 */
+    el.querySelectorAll("[data-set]").forEach(b=>b.onclick=()=>{setActiveKeyId(b.dataset.set);renderKeyList();toast("✅ 已切换模型");});
+    el.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{
+      const k=keys.find(x=>x.id===b.dataset.edit);if(!k)return;
+      window.__editingKeyId=k.id;document.getElementById("keyEditor").style.display="block";
+      document.getElementById("keyEditorTitle").textContent="✏️ 编辑 API Key";
+      document.getElementById("keLabel").value=k.label;document.getElementById("keProvider").value=k.provider;
+      document.getElementById("keApiKey").value=k.apiKey;document.getElementById("keModel").value=k.model;
+      document.getElementById("keApiUrl").value=k.apiUrl||"";document.getElementById("keBudget").value=k.budget||0;
+      document.getElementById("keErr").classList.remove("show");});
+    el.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
+      const kid=b.dataset.del;const k=keys.find(x=>x.id===kid);if(!k||!confirm("确定删除「"+k.label+"」吗？"))return;
+      const newKeys=keys.filter(x=>x.id!==kid);saveLlmKeys(newKeys);
+      if(getActiveKeyId()===kid){const remaining=newKeys.length?newKeys[0].id:null;setActiveKeyId(remaining);}
+      renderKeyList();toast("🗑️ 已删除");});
+  }
+  function keErr(m){const e=document.getElementById("keErr");e.textContent=m;e.classList.add("show");}
+  function pfErr(m){const e=document.getElementById("pfErr");e.textContent=m;e.classList.add("show");}
+}
+function showForgotPassword(){
+  const a=getAuth();if(!a)return;
+  function step1(){document.getElementById("authGate").innerHTML=`<div class="auth-card"><div class="auth-logo">PM</div>
+    <div class="forgot-title">找回密码 · 第 1 步</div>
+    <div class="auth-sub">验证绑定邮箱</div>
+    <div class="profile-field"><label>${a.email?"请输入绑定的邮箱地址":"你的账号尚未绑定邮箱，请通过「重置账号」清空数据和密码重新开始"}</label>
+    ${a.email?`<input class="auth-input" id="fpEmail" placeholder="输入邮箱" maxlength="60">`:""}</div>
+    ${a.email?`<button class="auth-btn" id="fpStep1">验证邮箱</button>`:`<button class="auth-btn" onclick="showGate()">返回登录</button>`}
+    <div class="auth-err" id="fpErr"></div></div>`;
+    if(!a.email)return;
+    document.getElementById("fpStep1").onclick=()=>{
+      if(document.getElementById("fpEmail").value.trim()===a.email) step2();
+      else{pfErr2("邮箱不匹配，请重试");}};}
+  function step2(){document.getElementById("authGate").innerHTML=`<div class="auth-card"><div class="auth-logo">PM</div>
+    <div class="forgot-title">找回密码 · 第 2 步</div>
+    <div class="auth-sub">${SECURITY_QS[a.sq||0]}</div>
+    <div class="profile-field"><label>密保答案</label><input class="auth-input" id="fpSa" placeholder="请输入你的密保答案"></div>
+    <button class="auth-btn" id="fpStep2">验证答案</button>
+    <div class="auth-err" id="fpErr"></div></div>`;
+    document.getElementById("fpStep2").onclick=()=>{
+      if(hashPwd(a.user,"sa"+document.getElementById("fpSa").value.trim())===a.sa) step3();
+      else{pfErr2("答案不正确，请重试");}};}
+  function step3(){document.getElementById("authGate").innerHTML=`<div class="auth-card"><div class="auth-logo">PM</div>
+    <div class="forgot-title">找回密码 · 第 3 步</div>
+    <div class="auth-sub">设置新密码</div>
+    <div class="profile-field"><label>新密码</label><input class="auth-input" id="fpP1" type="password" maxlength="32"></div>
+    <div class="profile-field"><label>确认新密码</label><input class="auth-input" id="fpP2" type="password" maxlength="32"></div>
+    <button class="auth-btn" id="fpStep3">重置密码并登录</button>
+    <div class="auth-err" id="fpErr"></div></div>`;
+    document.getElementById("fpStep3").onclick=()=>{
+      const p1=document.getElementById("fpP1").value,p2=document.getElementById("fpP2").value;
+      if(p1.length<4)return pfErr2("密码至少 4 位");
+      if(p1!==p2)return pfErr2("两次密码不一致");
+      a.hash=hashPwd(a.user,p1);localStorage.setItem(AUTH_KEY,JSON.stringify(a));
+      setSession(a.user);enterSystem();};}
+  function pfErr2(m){const e=document.getElementById("fpErr");e.textContent=m;e.classList.add("show");}
+  step1();
+}
+
+/* ============================================================
+ * 知识网络：力导向图 + Canvas 渲染
+ * ============================================================ */
+let graphView="card",graphNodes=[],graphEdges=[],graphAnim=null,graphHover=null;
+let graphScale=1,graphOffX=0,graphOffY=0,graphDragging=false,graphDragX=0,graphDragY=0;
+function buildGraphData(){
+  const domOrder=Object.keys(DOMAINS);const pads=[];let x0=50;
+  domOrder.forEach(dk=>{const ks=KB.filter(k=>k.domain===dk);
+    ks.forEach((k,i)=>{pads.push({id:k.id,title:k.title,domain:k.domain,
+      x:x0+Math.random()*80,y:180+Math.random()*120+(i*20),vx:0,vy:0});});
+    x0+=280;});
+  graphNodes=pads;const m={};graphNodes.forEach(n=>m[n.id]=n);
+  graphEdges=[];
+  Object.keys(KB_REL).forEach(id=>{const r=KB_REL[id];
+    (r.n||[]).forEach(tid=>{if(m[tid])graphEdges.push({s:m[id],t:m[tid],ty:"next"});});
+    (r.r||[]).forEach(tid=>{if(m[tid])graphEdges.push({s:m[id],t:m[tid],ty:"ref"});});});
+}
+function startForceLayout(target){
+  if(!target)return;const ctx=target.getContext("2d");if(!ctx)return;
+  const resize=()=>{if(target.parentElement){target.width=target.parentElement.clientWidth;target.height=Math.min(680,Math.max(520,graphNodes.length*12));}};
+  resize();let iter=0,alive=true;
+  graphScale=1;graphOffX=0;graphOffY=0;
+  target.onwheel=e=>{e.preventDefault();const z=Math.pow(1.001,-e.deltaY);graphScale=Math.max(0.3,Math.min(3,graphScale*z));};
+  target.onmousedown=e=>{graphDragging=true;graphDragX=e.clientX;graphDragY=e.clientY;};
+  target.onmouseup=()=>{graphDragging=false;};
+  target.onmouseleave=()=>{graphDragging=false;const tip=document.getElementById("graphTip");if(tip)tip.classList.remove("show");};
+  target.onmousemove=e=>{if(graphDragging){graphOffX+=e.clientX-graphDragX;graphOffY+=e.clientY-graphDragY;graphDragX=e.clientX;graphDragY=e.clientY;return;}
+    const r=target.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+    const tx=(mx-graphOffX)/graphScale,ty=(my-graphOffY)/graphScale;
+    let hit=null;graphNodes.forEach(n=>{if(Math.hypot(n.x-tx,n.y-ty)<12)hit=n.id;});
+    graphHover=hit;const tip=document.getElementById("graphTip");
+    if(tip&&hit){const k=KB.find(x=>x.id===hit);tip.textContent=(k?k.title:"")+" · "+(k?DOMAINS[k.domain]?.name:"");tip.style.left=(e.clientX+12)+"px";tip.style.top=(e.clientY+8)+"px";tip.classList.add("show");}
+    else if(tip)tip.classList.remove("show");};
+  target.onclick=()=>{if(graphHover)openKB(graphHover);};
+  const rep=1800,att=0.004,dam=0.88,min=60,cen=0.003;
+  function step(){
+    if(!alive)return;
+    if(iter<400){graphNodes.forEach(n=>{n.vx*=(1-cen);n.vy*=(1-cen);
+      n.vx+=(target.width/2-n.x)*cen;n.vy+=(target.height/2-n.y)*cen;});
+      for(let i=0;i<graphNodes.length;i++){const a=graphNodes[i];
+        for(let j=i+1;j<graphNodes.length;j++){const b=graphNodes[j];
+          let dx=a.x-b.x,dy=a.y-b.y;const d=Math.max(1,Math.sqrt(dx*dx+dy*dy));
+          const f=rep/(d*d);dx/=d;dy/=d;
+          a.vx+=dx*f;a.vy+=dy*f;b.vx-=dx*f;b.vy-=dy*f;}}
+      graphEdges.forEach(e=>{const dx=e.t.x-e.s.x,dy=e.t.y-e.s.y;
+        const d=Math.max(1,Math.sqrt(dx*dx+dy*dy));
+        const a=(d-min)*att;e.s.vx+=dx/d*a;e.s.vy+=dy/d*a;
+        e.t.vx-=dx/d*a;e.t.vy-=dy/d*a;});
+      graphNodes.forEach(n=>{n.vx*=dam;n.vy*=dam;
+        n.x=Math.max(20,Math.min(target.width-20,n.x+n.vx));
+        n.y=Math.max(20,Math.min(target.height-20,n.y+n.vy));});
+      iter++;}
+    ctx.clearRect(0,0,target.width,target.height);
+    ctx.save();ctx.translate(graphOffX,graphOffY);ctx.scale(graphScale,graphScale);
+    graphEdges.forEach(e=>{ctx.beginPath();ctx.moveTo(e.s.x,e.s.y);ctx.lineTo(e.t.x,e.t.y);
+      ctx.strokeStyle=e.ty==="next"?"rgba(99,102,241,.55)":"rgba(148,163,184,.15)";
+      ctx.lineWidth=e.ty==="next"?1.5:0.8;ctx.stroke();});
+    graphNodes.forEach(n=>{const c=DOMAINS[n.domain]||DOMAINS.trend;
+      const isHover=graphHover===n.id;const r=isHover?12:9;
+      ctx.beginPath();ctx.arc(n.x,n.y,r,0,Math.PI*2);
+      ctx.fillStyle=isHover?c.color:c.color+"dd";ctx.fill();
+      ctx.strokeStyle=isHover?"#fff":"rgba(255,255,255,.3)";ctx.lineWidth=isHover?2.5:1;ctx.stroke();
+      if(graphScale>0.5||isHover){const txt=n.title.slice(0,isHover?14:8);
+        const fs=isHover?12:10;ctx.font=(isHover?"bold ":"")+fs+"px sans-serif";
+        const tw=ctx.measureText(txt).width;
+        ctx.fillStyle="rgba(11,15,23,.8)";ctx.fillRect(n.x-tw/2-3,n.y+r+1,tw+6,fs+4);
+        ctx.fillStyle=isHover?"#fff":"#cbd5e1";ctx.textAlign="center";ctx.fillText(txt,n.x,n.y+r+fs+1);}});
+    ctx.restore();
+    /* 放大缩小控件 */
+    ctx.save();ctx.fillStyle="rgba(17,23,38,.85)";ctx.roundRect(10,10,32,88,10);ctx.fill();
+    ctx.fillStyle="#cbd5e1";ctx.font="16px sans-serif";ctx.textAlign="center";
+    ctx.fillText("+",26,38);ctx.fillText("-",26,66);ctx.fillText("⟲",26,92);
+    ctx.restore();
+    graphAnim=requestAnimationFrame(step);
+  }
+  window.addEventListener("resize",resize);
+  step();
+  /* 点击缩放控件 */
+  target.onclick=e=>{if(graphHover){openKB(graphHover);return;}
+    const r=target.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+    if(mx>10&&mx<42&&my>10&&my<98){
+      if(my<42)graphScale=Math.min(3,graphScale*1.4);
+      else if(my<70)graphScale=Math.max(0.3,graphScale/1.4);
+      else{graphScale=1;graphOffX=0;graphOffY=0;}}};
+}
+function toggleKBView(v){
+  if(v)graphView=v;else graphView=graphView==="card"?"graph":"card";
+  const g=document.getElementById("kbGrid"),c=document.getElementById("kbCanvas"),t=document.getElementById("kbToggle");
+  if(graphView==="graph"){
+    if(g)g.style.display="none";if(c){c.style.display="block";if(!graphNodes.length||graphAnim){cancelAnimationFrame(graphAnim);graphAnim=null;buildGraphData();startForceLayout(c);}}
+    if(t)t.textContent="📋 卡片视图";
+  }else{
+    if(g)g.style.display="";if(c){c.style.display="none";if(graphAnim){cancelAnimationFrame(graphAnim);graphAnim=null;}}
+    if(t)t.textContent="🕸️ 知识网络";}
+}
+
+/* ---------- 启动：装载知识包 → 鉴权门禁 → 进入系统 ---------- */
+loadPacksSequentially((window.PACK_MANIFEST||[]),()=>{ if(sessionValid()) enterSystem(); else showGate(); });
+</script>
+</body>
+</html>
