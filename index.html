@@ -2559,16 +2559,40 @@ function setSession(user){localStorage.setItem(SESSION_KEY,JSON.stringify({user:
 function authErr(msg){const e=document.getElementById("authErr");if(e){e.textContent=msg;e.classList.add("show");}}
 function renderAuthForm(){
   const g=document.getElementById("authGate");const a=getAuth();
-  if(!a){ /* 首次：创建账号 */
-    g.innerHTML=`<div class="auth-card"><div class="auth-logo">PM</div>
-      <div class="auth-title">首次使用 · 创建学习账号</div>
+  const registerMode=!a||(window.__authMode==="register");
+  const loginMode=!registerMode;
+  g.innerHTML=`<div class="auth-card"><div class="auth-logo">PM</div>
+    <div style="display:flex;gap:0;margin-bottom:18px;border:1px solid var(--line);border-radius:12px;overflow:hidden">
+    <button id="authTabLogin" style="flex:1;padding:9px;font-weight:700;font-size:13px;background:${loginMode?'var(--indigo)':'transparent'};color:${loginMode?'#fff':'var(--tx2)'};border:none;cursor:pointer;transition:.15s">登录</button>
+    <button id="authTabReg" style="flex:1;padding:9px;font-weight:700;font-size:13px;background:${registerMode?'var(--indigo)':'transparent'};color:${registerMode?'#fff':'var(--tx2)'};border:none;cursor:pointer;transition:.15s">注册</button>
+    </div>
+    <div id="authFormBody">
+    ${registerMode?`
+      <div class="auth-title">创建学习账号</div>
       <div class="auth-sub">账号密码仅保存在本机浏览器，用于进入代练系统</div>
       <div class="auth-field"><label>账号</label><input class="auth-input" id="regUser" maxlength="20" placeholder="2-20 位，建议用你的常用名"></div>
       <div class="auth-field"><label>密码</label><input class="auth-input" id="regPass" type="password" maxlength="32" placeholder="至少 4 位"></div>
       <div class="auth-field"><label>确认密码</label><input class="auth-input" id="regPass2" type="password" maxlength="32" placeholder="再输入一次"></div>
       <button class="auth-btn" id="authBtn">创建并进入系统</button>
-      <div class="auth-err" id="authErr"></div>
-      <div class="auth-note">离线系统提示：账号只存在于这台电脑的浏览器里。<br>忘记密码只能重置账号（学习进度会一并清空）。</div></div>`;
+    `:`
+      <div class="auth-title">AI 产品经理代练系统</div>
+      <div class="auth-sub">${a?'上次账号：<b>'+a.user+'</b>':'输入账号密码登录'}</div>
+      <div class="auth-field"><label>账号</label><input class="auth-input" id="logUser" maxlength="20" value="${a?a.user:''}"></div>
+      <div class="auth-field"><label>密码</label><input class="auth-input" id="logPass" type="password" maxlength="32" placeholder="输入密码"></div>
+      <button class="auth-btn" id="authBtn">进入系统</button>
+      ${a?`<div class="auth-note" style="margin-top:12px"><span class="forgot-link" onclick="showForgotPassword()">找回密码</span> · <a href="javascript:void(0)" id="resetAuth" style="color:var(--indigo2)">重置账号</a></div>`:''}
+    `}
+    </div>
+    <div class="auth-err" id="authErr"></div>
+    <div class="auth-note" style="margin-top:10px">管理员创建的用户直接登录即可，无需注册</div>`;
+  /* Tab 切换 */
+  const tabLogin=document.getElementById("authTabLogin");
+  const tabReg=document.getElementById("authTabReg");
+  if(tabLogin)tabLogin.onclick=()=>{window.__authMode="login";renderAuthForm();};
+  if(tabReg)tabReg.onclick=()=>{window.__authMode="register";renderAuthForm();};
+  /* 注册逻辑 */
+  const regBtn=document.getElementById("regUser");
+  if(regBtn){
     const submit=()=>{const u=document.getElementById("regUser").value.trim();
       const p=document.getElementById("regPass").value,p2=document.getElementById("regPass2").value;
       if(u.length<2)return authErr("账号至少 2 位。");
@@ -2576,29 +2600,34 @@ function renderAuthForm(){
       if(p!==p2)return authErr("两次输入的密码不一致。");
       localStorage.setItem(AUTH_KEY,JSON.stringify({user:u,hash:hashPwd(u,p)}));
       setSession(u);enterSystem();
-      /* 同步注册到 Supabase */
-      supabaseRegister(u,hashPwd(u,p)).then(r=>{
-        if(r&&r.is_admin)toast("👑 你是系统首位管理员");});};
+      supabaseRegister(u,hashPwd(u,p)).then(r=>{if(r&&r.is_admin)toast("👑 你是系统首位管理员");});};
     document.getElementById("authBtn").onclick=submit;
     ["regUser","regPass","regPass2"].forEach(id=>document.getElementById(id).addEventListener("keydown",e=>{if(e.key==="Enter")submit();}));
-  }else{ /* 已注册：登录 */
-    g.innerHTML=`<div class="auth-card"><div class="auth-logo">PM</div>
-      <div class="auth-title">AI 产品经理代练系统</div>
-      <div class="auth-sub">登录后继续学习 · 上次账号：<b>${a.user}</b></div>
-      <div class="auth-field"><label>账号</label><input class="auth-input" id="logUser" maxlength="20" value="${a.user}"></div>
-      <div class="auth-field"><label>密码</label><input class="auth-input" id="logPass" type="password" maxlength="32" placeholder="输入密码"></div>
-      <button class="auth-btn" id="authBtn">进入系统</button>
-      <div class="auth-err" id="authErr"></div>
-      <div class="auth-note"><span class="forgot-link" onclick="showForgotPassword()">找回密码</span> · <a href="javascript:void(0)" id="resetAuth" style="color:var(--indigo2)">重置账号</a>（清空进度与账号）</div></div>`;
+  }
+  /* 登录逻辑 */
+  const logBtn=document.getElementById("logUser");
+  if(logBtn){
     const submit=()=>{const u=document.getElementById("logUser").value.trim();
       const p=document.getElementById("logPass").value;
       if(!u||!p)return authErr("请输入账号和密码。");
-      if(u===a.user&&hashPwd(u,p)===a.hash){setSession(u);enterSystem();supabaseLoginLog(u);}
-      else authErr("账号或密码错误，请重试。");};
+      /* 先检查本地 */
+      if(a&&u===a.user&&hashPwd(u,p)===a.hash){setSession(u);enterSystem();supabaseLoginLog(u);return;}
+      /* 再检查 Supabase */
+      fetch(SUPABASE_URL+"/rest/v1/users?username=eq."+encodeURIComponent(u)+"&select=password_hash,disabled",{headers:getSupabaseHeaders()})
+      .then(r=>r.json()).then(rows=>{
+        if(rows&&rows.length>0){
+          if(rows[0].disabled)return authErr("该账号已被禁用，请联系管理员。");
+          if(rows[0].password_hash===hashPwd(u,p)){
+            localStorage.setItem(AUTH_KEY,JSON.stringify({user:u,hash:hashPwd(u,p)}));
+            setSession(u);enterSystem();supabaseLoginLog(u);
+          }else{authErr("密码错误，请重试。");}
+        }else{authErr("账号不存在，请先注册或联系管理员。");}
+      }).catch(()=>authErr("网络错误，无法验证账号。"));
+    };
     document.getElementById("authBtn").onclick=submit;
     ["logUser","logPass"].forEach(id=>document.getElementById(id).addEventListener("keydown",e=>{if(e.key==="Enter")submit();}));
-    document.getElementById("logPass").focus();
-    document.getElementById("resetAuth").onclick=()=>{
+    const rp=document.getElementById("logPass");if(rp)rp.focus();
+    const ra=document.getElementById("resetAuth");if(ra)ra.onclick=()=>{
       if(confirm("重置账号将删除账号密码并清空全部学习进度，且无法恢复。确定继续吗？")){
         localStorage.removeItem(AUTH_KEY);localStorage.removeItem(SESSION_KEY);
         localStorage.removeItem(LS_KEY);S=defaultState();chatLog=[];renderAuthForm();}};
