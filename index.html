@@ -1258,11 +1258,14 @@ const VIEWS=[
 {id:"quiz",ico:"🎯",name:"刷题训练",desc:"分领域刷题，即时判分与解析，帮你定位薄弱点"},
 {id:"iv",ico:"🎤",name:"面试模拟",desc:"高频面试题，自己先答再看参考思路与自评清单"},
 {id:"cost",ico:"💰",name:"费用明细",desc:"AI 教练调用花费与 Token 明细，可设置预算"},
-{id:"me",ico:"📊",name:"成长档案",desc:"积分、连续天数、各领域掌握度一目了然"}
+{id:"me",ico:"📊",name:"成长档案",desc:"积分、连续天数、各领域掌握度一目了然"},
+{id:"admin",ico:"⚙️",name:"管理后台",desc:"用户管理、登录日志、系统设置"}
 ];
 let VIEW="chat";
 function buildNav(){const nav=document.getElementById("nav");nav.innerHTML="";
-VIEWS.forEach(v=>{const b=document.createElement("button");b.className="nav-btn"+(VIEW===v.id?" active":"");
+const isAdmin=window.__isAdmin||false;
+VIEWS.forEach(v=>{if(v.id==="admin"&&!isAdmin)return;
+const b=document.createElement("button");b.className="nav-btn"+(VIEW===v.id?" active":"");
 b.innerHTML=`<span class="ico">${v.ico}</span><span>${v.name}</span>`;b.onclick=()=>go(v.id);nav.appendChild(b);});}
 function go(id){VIEW=id;buildNav();const v=VIEWS.find(x=>x.id===id);
 document.getElementById("pageTitle").textContent=v.name;document.getElementById("pageDesc").textContent=v.desc;
@@ -1271,7 +1274,7 @@ render();}
 /* ---------- 渲染分发 ---------- */
 function render(){const el=document.getElementById("view");el.innerHTML="";
 if(VIEW==="chat")renderChat(el);else if(VIEW==="kb")renderKB(el);else if(VIEW==="tools")renderTools(el);
-else if(VIEW==="quiz")renderQuiz(el);else if(VIEW==="iv")renderIV(el);else if(VIEW==="cost")renderCost(el);else{renderMe(el);const calEl=document.getElementById("checkinCalendar");if(calEl)renderCheckinCalendar(calEl);}}
+else if(VIEW==="quiz")renderQuiz(el);else if(VIEW==="iv")renderIV(el);else if(VIEW==="cost")renderCost(el);else if(VIEW==="admin")renderAdmin(el);else{renderMe(el);const calEl=document.getElementById("checkinCalendar");if(calEl)renderCheckinCalendar(calEl);}}
 
 /* ============================================================
  * 模块一：教练陪练对话
@@ -2450,6 +2453,66 @@ async function syncFromSupabase(){
     setTimeout(()=>location.reload(),1500);
   }catch(e){toast("⚠️ 恢复失败："+(e.message||"未知错误"));}
 }
+/* ---------- Supabase 管理员 API ---------- */
+const ADMIN_TABLE="users", LOG_TABLE="login_logs";
+async function supabaseRegister(username,passwordHash){
+  try{
+    const resp=await fetch(SUPABASE_URL+"/rest/v1/rpc/register_user",{
+      method:"POST",headers:getSupabaseHeaders(),
+      body:JSON.stringify({p_username:username,p_password_hash:passwordHash})});
+    if(!resp.ok)return {success:false,error:"注册失败"};
+    return await resp.json();
+  }catch(e){return {success:false,error:e.message};}
+}
+async function supabaseLoginLog(username){
+  try{
+    const ua=navigator.userAgent||"";
+    await fetch(SUPABASE_URL+"/rest/v1/"+LOG_TABLE,{
+      method:"POST",headers:getSupabaseHeaders(),
+      body:JSON.stringify({username,user_agent:ua.slice(0,200)})});
+  }catch(e){}
+}
+async function supabaseGetUsers(){
+  try{
+    const resp=await fetch(SUPABASE_URL+"/rest/v1/"+ADMIN_TABLE+"?order=created_at.desc",{
+      method:"GET",headers:getSupabaseHeaders()});
+    if(!resp.ok)return [];
+    return await resp.json();
+  }catch(e){return [];}
+}
+async function supabaseToggleAdmin(username,isAdmin){
+  try{
+    await fetch(SUPABASE_URL+"/rest/v1/"+ADMIN_TABLE+"?username=eq."+encodeURIComponent(username),{
+      method:"PATCH",headers:getSupabaseHeaders(),
+      body:JSON.stringify({is_admin:isAdmin,last_login:new Date().toISOString()})});
+    return true;
+  }catch(e){return false;}
+}
+async function supabaseToggleDisabled(username,disabled){
+  try{
+    await fetch(SUPABASE_URL+"/rest/v1/"+ADMIN_TABLE+"?username=eq."+encodeURIComponent(username),{
+      method:"PATCH",headers:getSupabaseHeaders(),
+      body:JSON.stringify({disabled})});
+    return true;
+  }catch(e){return false;}
+}
+async function supabaseGetLoginLogs(limit){
+  try{
+    const resp=await fetch(SUPABASE_URL+"/rest/v1/"+LOG_TABLE+"?order=login_time.desc&limit="+(limit||50),{
+      method:"GET",headers:getSupabaseHeaders()});
+    if(!resp.ok)return [];
+    return await resp.json();
+  }catch(e){return [];}
+}
+async function checkCurrentUserAdmin(){
+  const a=getAuth();if(!a)return false;
+  try{
+    const resp=await fetch(SUPABASE_URL+"/rest/v1/"+ADMIN_TABLE+"?username=eq."+encodeURIComponent(a.user)+"&select=is_admin",{
+      method:"GET",headers:getSupabaseHeaders()});
+    const rows=await resp.json();
+    return rows&&rows.length>0&&rows[0].is_admin===true;
+  }catch(e){return false;}
+}
 
 function initApp(){touchStreak();buildNav();go("chat");renderLevel();renderStreak();renderCheckinBtn();
 const idx=getSessionIndex();const valid=idx.filter(s=>{const msgs=loadSessionMessages(s.id);return msgs.length>1;});
@@ -2512,7 +2575,10 @@ function renderAuthForm(){
       if(p.length<4)return authErr("密码至少 4 位。");
       if(p!==p2)return authErr("两次输入的密码不一致。");
       localStorage.setItem(AUTH_KEY,JSON.stringify({user:u,hash:hashPwd(u,p)}));
-      setSession(u);enterSystem();};
+      setSession(u);enterSystem();
+      /* 同步注册到 Supabase */
+      supabaseRegister(u,hashPwd(u,p)).then(r=>{
+        if(r&&r.is_admin)toast("👑 你是系统首位管理员");});};
     document.getElementById("authBtn").onclick=submit;
     ["regUser","regPass","regPass2"].forEach(id=>document.getElementById(id).addEventListener("keydown",e=>{if(e.key==="Enter")submit();}));
   }else{ /* 已注册：登录 */
@@ -2527,7 +2593,7 @@ function renderAuthForm(){
     const submit=()=>{const u=document.getElementById("logUser").value.trim();
       const p=document.getElementById("logPass").value;
       if(!u||!p)return authErr("请输入账号和密码。");
-      if(u===a.user&&hashPwd(u,p)===a.hash){setSession(u);enterSystem();}
+      if(u===a.user&&hashPwd(u,p)===a.hash){setSession(u);enterSystem();supabaseLoginLog(u);}
       else authErr("账号或密码错误，请重试。");};
     document.getElementById("authBtn").onclick=submit;
     ["logUser","logPass"].forEach(id=>document.getElementById(id).addEventListener("keydown",e=>{if(e.key==="Enter")submit();}));
@@ -2543,6 +2609,8 @@ function enterSystem(){document.getElementById("authGate").style.display="none";
   const app=document.getElementById("appRoot");app.style.display="flex";
   const a=getAuth();const uv=document.getElementById("userVal");if(uv&&a)uv.textContent=a.user;
   if(uv)uv.onclick=openProfile;if(uv)uv.style.cursor="pointer";
+  /* 检查管理员状态 */
+  checkCurrentUserAdmin().then(admin=>{window.__isAdmin=admin;buildNav();if(admin)console.log("👑 管理员模式");});
   if(!__appInited){__appInited=true;initApp();}}
 function showGate(){document.getElementById("appRoot").style.display="none";
   document.getElementById("authGate").style.display="flex";renderAuthForm();}
@@ -2845,6 +2913,67 @@ function toggleKBView(v){
   }else{
     if(g)g.style.display="";if(c){c.style.display="none";if(graphAnim){cancelAnimationFrame(graphAnim);graphAnim=null;}}
     if(t)t.textContent="🕸️ 知识网络";}
+}
+
+/* ---------- 管理员后台 ---------- */
+function renderAdmin(el){
+  const a=getAuth();if(!a){el.innerHTML='<div class="empty">请先登录</div>';return;}
+  el.innerHTML=`<div class="page"><div class="page-head"><h2>⚙️ 管理后台</h2>
+  <p>用户管理、登录日志、系统设置。仅管理员可见。</p></div>
+  <div class="toolbar"><button class="fbtn active" id="adminUserTab">👥 用户管理</button>
+  <button class="fbtn" id="adminLogTab">📋 登录日志</button>
+  <span style="margin-left:auto;font-size:12px;color:var(--tx3)" id="adminStatus">加载中…</span></div>
+  <div id="adminContent"><div class="empty">加载中…</div></div></div>`;
+  document.getElementById("adminUserTab").onclick=()=>{document.getElementById("adminUserTab").className="fbtn active";document.getElementById("adminLogTab").className="fbtn";loadAdminUsers();};
+  document.getElementById("adminLogTab").onclick=()=>{document.getElementById("adminLogTab").className="fbtn active";document.getElementById("adminUserTab").className="fbtn";loadAdminLogs();};
+  loadAdminUsers();
+  async function loadAdminUsers(){
+    const ac=document.getElementById("adminContent");if(!ac)return;
+    document.getElementById("adminStatus").textContent="正在获取用户列表…";
+    const users=await supabaseGetUsers();
+    if(!users||!users.length){ac.innerHTML='<div class="empty">暂无用户数据</div>';document.getElementById("adminStatus").textContent="0 个用户";return;}
+    document.getElementById("adminStatus").textContent=users.length+" 个用户";
+    ac.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:var(--card);border-bottom:2px solid var(--line)">${["用户名","角色","状态","注册时间","最后登录","操作"].map(h=>`<th style="padding:10px 10px;text-align:left;color:var(--tx2);font-weight:700">${h}</th>`).join("")}</tr></thead>
+    <tbody>${users.map(u=>{
+      const isSelf=u.username===a.user;
+      const created=u.created_at?new Date(u.created_at).toLocaleString(): "—";
+      const lastLogin=u.last_login?new Date(u.last_login).toLocaleString():"从未登录";
+      return `<tr style="border-bottom:1px solid var(--line)">
+      <td style="padding:8px 10px;font-weight:700">${u.username}${isSelf?' <span style="color:var(--green2);font-size:11px">(本人)</span>':''}</td>
+      <td style="padding:8px 10px">${u.is_admin?'<span style="color:var(--amber);font-weight:700">👑 管理员</span>':'<span style="color:var(--tx2)">用户</span>'}</td>
+      <td style="padding:8px 10px">${u.disabled?'<span style="color:var(--red);font-weight:700">🚫 已禁用</span>':'<span style="color:var(--green2)">✅ 正常</span>'}</td>
+      <td style="padding:8px 10px;color:var(--tx3);font-size:12px">${created}</td>
+      <td style="padding:8px 10px;color:var(--tx3);font-size:12px">${lastLogin}</td>
+      <td style="padding:8px 10px;white-space:nowrap">${isSelf?'<span style="color:var(--tx3);font-size:11px">不可操作本人</span>':
+        `<button class="chip" data-admin="${u.username}" style="font-size:11px;color:${u.is_admin?'var(--tx3)':'var(--amber)'};padding:3px 8px">${u.is_admin?'取消管理':'设为管理'}</button>
+        <button class="chip" data-disable="${u.username}" style="font-size:11px;color:${u.disabled?'var(--green2)':'var(--red)'};padding:3px 8px">${u.disabled?'启用':'禁用'}</button>`}
+      </td></tr>`;}).join("")}</tbody></table></div>`;
+    ac.querySelectorAll("[data-admin]").forEach(b=>b.onclick=async()=>{
+      const uname=b.dataset.admin;const u=users.find(x=>x.username===uname);
+      if(!u||!confirm((u.is_admin?"取消":"设为")+"管理员「"+uname+"」？"))return;
+      if(await supabaseToggleAdmin(uname,!u.is_admin)){toast("✅ 已更新");loadAdminUsers();}});
+    ac.querySelectorAll("[data-disable]").forEach(b=>b.onclick=async()=>{
+      const uname=b.dataset.disable;const u=users.find(x=>x.username===uname);
+      if(!u||!confirm((u.disabled?"启用":"禁用")+"账号「"+uname+"」？"))return;
+      if(await supabaseToggleDisabled(uname,!u.disabled)){toast("✅ 已更新");loadAdminUsers();}});
+  }
+  async function loadAdminLogs(){
+    const ac=document.getElementById("adminContent");if(!ac)return;
+    document.getElementById("adminStatus").textContent="正在获取登录日志…";
+    const logs=await supabaseGetLoginLogs(100);
+    if(!logs||!logs.length){ac.innerHTML='<div class="empty">暂无登录记录</div>';document.getElementById("adminStatus").textContent="0 条日志";return;}
+    document.getElementById("adminStatus").textContent=logs.length+" 条日志";
+    ac.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+    <thead><tr style="background:var(--card);border-bottom:2px solid var(--line)">${["时间","用户名","设备信息"].map(h=>`<th style="padding:10px 10px;text-align:left;color:var(--tx2);font-weight:700">${h}</th>`).join("")}</tr></thead>
+    <tbody>${logs.map(l=>{
+      const time=l.login_time?new Date(l.login_time).toLocaleString():"—";
+      const ua=(l.user_agent||"").slice(0,80);
+      return `<tr style="border-bottom:1px solid var(--line)"><td style="padding:8px 10px;color:var(--tx3);white-space:nowrap">${time}</td>
+      <td style="padding:8px 10px;font-weight:700">${l.username}</td>
+      <td style="padding:8px 10px;color:var(--tx3);font-size:11px">${ua}</td></tr>`;
+    }).join("")}</tbody></table></div>`;
+  }
 }
 
 /* ---------- 启动：装载知识包 → 鉴权门禁 → 进入系统 ---------- */
