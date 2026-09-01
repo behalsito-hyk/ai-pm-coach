@@ -2979,12 +2979,31 @@ function renderAdmin(el){
       <td style="padding:8px 10px;color:var(--tx3);font-size:12px">${lastLogin}</td>
       <td style="padding:8px 10px;white-space:nowrap">${isSelf?'<span style="color:var(--tx3);font-size:11px">不可操作本人</span>':
         `<button class="chip" data-admin="${u.username}" style="font-size:11px;color:${u.is_admin?'var(--tx3)':'var(--amber)'};padding:3px 8px">${u.is_admin?'取消管理':'设为管理'}</button>
-        <button class="chip" data-disable="${u.username}" style="font-size:11px;color:${u.disabled?'var(--green2)':'var(--red)'};padding:3px 8px">${u.disabled?'启用':'禁用'}</button>`}
+        <button class="chip" data-disable="${u.username}" style="font-size:11px;color:${u.disabled?'var(--green2)':'var(--red)'};padding:3px 8px">${u.disabled?'启用':'禁用'}</button>
+        <button class="chip" data-resetpwd="${u.username}" style="font-size:11px;color:var(--indigo2);padding:3px 8px">🔑 重置密码</button>`}
       </td></tr>`;}).join("")}</tbody></table></div>`;
     ac.querySelectorAll("[data-admin]").forEach(b=>b.onclick=async()=>{
       const uname=b.dataset.admin;const u=users.find(x=>x.username===uname);
       if(!u||!confirm((u.is_admin?"取消":"设为")+"管理员「"+uname+"」？"))return;
       if(await supabaseToggleAdmin(uname,!u.is_admin)){toast("✅ 已更新");loadAdminUsers();}});
+    ac.querySelectorAll("[data-resetpwd]").forEach(b=>b.onclick=()=>{
+      const uname=b.dataset.resetpwd;
+      document.getElementById("modalBox").innerHTML=`<button class="x" onclick="closeModal()">✕</button>
+      <h3 style="margin-bottom:4px">🔑 重置密码</h3><div class="sub">用户：<b>${uname}</b></div>
+      <div class="profile-field"><label>新密码</label><input class="auth-input" id="rpPass" type="password" maxlength="32" placeholder="至少 4 位"></div>
+      <div class="profile-field"><label>确认新密码</label><input class="auth-input" id="rpPass2" type="password" maxlength="32" placeholder="再输入一次"></div>
+      <div class="auth-err" id="rpErr"></div>
+      <div class="modal-actions"><button class="btn btn-primary" id="rpSaveBtn">💾 保存新密码</button><button class="btn btn-ghost" onclick="closeModal()">取消</button></div>`;
+      document.getElementById("modal").classList.add("show");
+      document.getElementById("rpSaveBtn").onclick=async ()=>{
+        const p=document.getElementById("rpPass").value;const p2=document.getElementById("rpPass2").value;
+        if(!p||p.length<4)return rpErr("密码至少 4 位");if(p!==p2)return rpErr("两次密码不一致");
+        const hash=hashPwd(uname,p);
+        const resp=await fetch(SUPABASE_URL+"/rest/v1/users?username=eq."+encodeURIComponent(uname),{method:"PATCH",headers:getSupabaseHeaders(),body:JSON.stringify({password_hash:hash})});
+        if(resp.ok){closeModal();toast("✅ 已重置「"+uname+"」的密码");}else{rpErr("重置失败："+(await resp.text()).slice(0,80));}
+      };
+      function rpErr(m){const e=document.getElementById("rpErr");e.textContent=m;e.classList.add("show");}
+    });
     ac.querySelectorAll("[data-disable]").forEach(b=>b.onclick=async()=>{
       const uname=b.dataset.disable;const u=users.find(x=>x.username===uname);
       if(!u||!confirm((u.disabled?"启用":"禁用")+"账号「"+uname+"」？"))return;
