@@ -1,0 +1,10 @@
+# 忽略系统文件
+Thumbs.db
+.DS_Store
+Desktop.ini
+*.log
+node_modules/
+.git/
+
+# 部署配置文件（含 GitHub Token，切勿提交）
+deploy-config.json
