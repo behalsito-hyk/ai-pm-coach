@@ -303,6 +303,36 @@ input,textarea,select{font-family:inherit}
 .cal-day.today.checked{box-shadow:inset 0 0 0 1.5px var(--green2)}
 .cal-stat{display:flex;gap:16px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--tx2)}
 .cal-stat b{color:var(--tx);font-weight:700}
+/* ===== 更新速览 ===== */
+.update-timeline{position:relative;padding-left:32px}
+.update-timeline::before{content:"";position:absolute;left:10px;top:4px;bottom:0;width:2px;background:var(--line);
+  border-radius:99px}
+.update-entry{position:relative;margin-bottom:18px;padding:16px 18px;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;transition:.2s;cursor:pointer}
+.update-entry:hover{transform:translateY(-2px);border-color:var(--line2);box-shadow:var(--shadow)}
+.update-entry::before{content:"";position:absolute;left:-24px;top:22px;width:10px;height:10px;border-radius:50%;
+  background:var(--indigo);border:2px solid var(--bg);box-shadow:0 0 0 2px var(--indigo)}
+.update-entry.latest::before{background:var(--amber);box-shadow:0 0 0 2px var(--amber),0 0 12px rgba(245,158,11,.5)}
+.update-entry .u-date{font-size:11px;font-weight:700;color:var(--amber);letter-spacing:.5px;margin-bottom:4px}
+.update-entry .u-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
+.update-entry .u-tag{font-size:10.5px;padding:2px 8px;border-radius:99px;background:rgba(99,102,241,.12);
+  border:1px solid rgba(129,140,248,.35);color:var(--indigo2)}
+.update-entry .u-tag.latest-tag{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.5);color:var(--amber)}
+.update-entry h3{font-size:16px;line-height:1.5;margin-bottom:6px;font-weight:800}
+.update-entry .u-summary{font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:8px}
+.update-entry .u-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--tx3)}
+.update-entry .u-meta span{display:inline-flex;align-items:center;gap:4px}
+.update-entry .u-meta b{color:var(--tx);font-weight:700}
+.update-entry .u-detail{display:none;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);
+  font-size:13px;line-height:1.7;color:var(--tx2)}
+.update-entry .u-detail.show{display:block;animation:pop .25s}
+.update-entry .u-detail h4{color:var(--indigo2);font-size:13.5px;margin:10px 0 4px}
+.update-entry .u-detail ul{margin:4px 0 8px 2px;padding-left:18px}
+.update-entry .u-detail li{margin:3px 0}
+.update-entry .u-source{font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5}
+.update-entry .u-source b{color:var(--tx2)}
+.u-empty{text-align:center;padding:60px 20px;color:var(--tx3);font-size:14px;line-height:2}
+.u-empty .big{font-size:48px;display:block;margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -337,7 +367,7 @@ input,textarea,select{font-family:inherit}
         <div class="topbar-desc" id="pageDesc"></div>
       </div>
       <div class="topbar-right">
-        <div class="stat-pill">📦 知识 <b id="packDateVal">内置</b></div>
+        <div class="stat-pill" id="packPill">📰 更新 <b id="packDateVal">内置</b></div>
         <div class="stat-pill">🔥 连续 <b id="streakVal">0</b> 天</div>
         <div class="stat-pill">⭐ 积分 <b id="pointVal">0</b></div>
       </div>
@@ -1257,6 +1287,7 @@ const VIEWS=[
 {id:"tools",ico:"🧰",name:"AI工具",desc:"每日推荐最新最好用的 AI 工具，今日推荐自动轮换"},
 {id:"quiz",ico:"🎯",name:"刷题训练",desc:"分领域刷题，即时判分与解析，帮你定位薄弱点"},
 {id:"iv",ico:"🎤",name:"面试模拟",desc:"高频面试题，自己先答再看参考思路与自评清单"},
+{id:"updates",ico:"📰",name:"更新速览",desc:"每日前沿知识更新日历，一览最新收录的内容"},
 {id:"cost",ico:"💰",name:"费用明细",desc:"AI 教练调用花费与 Token 明细，可设置预算"},
 {id:"me",ico:"📊",name:"成长档案",desc:"积分、连续天数、各领域掌握度一目了然"},
 {id:"admin",ico:"⚙️",name:"管理后台",desc:"用户管理、登录日志、系统设置"}
@@ -1274,7 +1305,7 @@ render();}
 /* ---------- 渲染分发 ---------- */
 function render(){const el=document.getElementById("view");el.innerHTML="";
 if(VIEW==="chat")renderChat(el);else if(VIEW==="kb")renderKB(el);else if(VIEW==="tools")renderTools(el);
-else if(VIEW==="quiz")renderQuiz(el);else if(VIEW==="iv")renderIV(el);else if(VIEW==="cost")renderCost(el);else if(VIEW==="admin")renderAdmin(el);else{renderMe(el);const calEl=document.getElementById("checkinCalendar");if(calEl)renderCheckinCalendar(calEl);}}
+else if(VIEW==="quiz")renderQuiz(el);else if(VIEW==="iv")renderIV(el);else if(VIEW==="updates")renderUpdateLog(el);else if(VIEW==="cost")renderCost(el);else if(VIEW==="admin")renderAdmin(el);else{renderMe(el);const calEl=document.getElementById("checkinCalendar");if(calEl)renderCheckinCalendar(calEl);}}
 
 /* ============================================================
  * 模块一：教练陪练对话
@@ -1321,7 +1352,9 @@ function loadChatSession(sid){
 function newChatSession(){
   /* 保存当前会话 */
   if(__currentSessionId&&chatLog.length>1)saveCurrentChat();
-  __currentSessionId=null;chatLog=[];render();toast("✅ 已开启新会话，发第一条消息时自动存档");}
+  __currentSessionId=null;chatLog=[];
+  localStorage.removeItem("aipm_last_session");
+  render();toast("✅ 已开启新会话，发第一条消息时自动存档");}
 function showHistory(){
   const idx=getSessionIndex();
   document.getElementById("modalBox").innerHTML=`<button class="x" onclick="closeModal()">✕</button>
@@ -1400,8 +1433,9 @@ ${["给我讲讲 RAG","Prompt/RAG/微调怎么选","出一道大模型基础的�
 sc.appendChild(q);}
 function pushMsg(who,html){chatLog.push({who,html});const sc=document.getElementById("chatScroll");
 sc.appendChild(msgDom({who,html}));sc.scrollTop=sc.scrollHeight;
-/* 自动保存会话（仅保存有实际提问的） */
-if(who==="user"){ensureSession();saveCurrentChat();}}
+/* 自动保存会话 */
+if(who==="user"){ensureSession();saveCurrentChat();}
+else if(who==="coach"&&__currentSessionId){saveCurrentChat();}}
 function coachTypingThen(html,delay){const sc=document.getElementById("chatScroll");
 const t=document.createElement("div");t.className="msg coach";t.id="typingMsg";
 t.innerHTML=`<div class="avatar">教</div><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div>`;
@@ -1537,29 +1571,37 @@ function getActiveLlmConfig(){
   return {enabled:true,provider:key.provider,model:key.model,apiKey:key.apiKey,apiUrl:key.apiUrl||"",budget:key.budget||0,label:key.label};
 }
 function getLlmConfig(){return getActiveLlmConfig();}
-async function callLLM(prompt,systemMsg){
-  const cfg=getLlmConfig();if(!cfg)return null;
+async function callLLMStream(prompt,systemMsg,onChunk,onDone){
+  const cfg=getLlmConfig();if(!cfg){onDone(null,"⚠️ 未配置 API Key");return;}
   const url=cfg.provider==="custom"&&cfg.apiUrl?cfg.apiUrl:
     cfg.provider==="deepseek"?"https://api.deepseek.com/chat/completions":
     "https://api.openai.com/v1/chat/completions";
-  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),30000);
+  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),60000);
   try{
     const resp=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+cfg.apiKey},
       body:JSON.stringify({model:cfg.model||"gpt-4o-mini",messages:[{role:"system",content:systemMsg},{role:"user",content:prompt}],
-      temperature:0.7,max_tokens:1500}),signal:controller.signal});
+      temperature:0.7,max_tokens:1500,stream:true}),signal:controller.signal});
     clearTimeout(timer);
-    if(!resp.ok)return {content:"⚠️ API 请求失败（"+resp.status+"）"+((await resp.text()).slice(0,100)||""),usage:null};
-    const data=await resp.json();
-    const content=data.choices?.[0]?.message?.content;
-    if(!content)return {content:"⚠️ API 返回格式异常",usage:null};
-    const usage=data.usage||{prompt_tokens:0,completion_tokens:0,total_tokens:0};
-    /* 记录用量 */
-    trackLLMUsage(cfg.model||"unknown",usage,cfg.provider,prompt,content,cfg.label||"");
-    return {content,usage};
+    if(!resp.ok){const e=(await resp.text()).slice(0,100);onDone(null,"⚠️ API 请求失败（"+resp.status+"）"+e);return;}
+    const reader=resp.body.getReader();const decoder=new TextDecoder();
+    let full="",buf="",usage=null;
+    while(true){
+      const{done,value}=await reader.read();if(done)break;
+      buf+=decoder.decode(value,{stream:true});
+      const lines=buf.split("\n");buf=lines.pop()||"";
+      for(const line of lines){
+        const t=line.trim();if(!t||!t.startsWith("data: "))continue;
+        const d=t.slice(6);if(d==="[DONE]")continue;
+        try{const j=JSON.parse(d);const delta=j.choices?.[0]?.delta;
+          if(delta?.content){full+=delta.content;onChunk(full);}
+          if(j.usage)usage=j.usage;}catch(e){/* 跳过解析错误 */}}}
+    if(usage)trackLLMUsage(cfg.model||"unknown",usage,cfg.provider,prompt,full,cfg.label||"");
+    onDone(full,null,usage);
   }catch(e){clearTimeout(timer);
-    if(e.name==="AbortError")return {content:"⚠️ 请求超时（30 秒），请检查网络或 API 配置",usage:null};
-    if(e.message&&e.message.includes("Failed to fetch"))return {content:"⚠️ 网络请求失败：浏览器跨域限制（若从 file:// 打开，需用本地服务器启动）或网络不可用",usage:null};
-    return {content:"⚠️ 网络请求失败："+(e.message||"未知错误"),usage:null};}
+    const m=e.name==="AbortError"?"⚠️ 请求超时（60 秒）":
+      e.message?.includes("Failed to fetch")?"⚠️ 网络请求失败：浏览器跨域限制（若从 file:// 打开，需用本地服务器启动）或网络不可用":
+      "⚠️ 网络请求失败："+(e.message||"未知错误");
+    onDone(null,m);}
 }
 /* LLM 用量与成本追踪 */
 const LLM_USAGE_KEY="aipm_llm_usage";
@@ -1596,7 +1638,24 @@ function trackLLMUsage(model,usage,provider,question,answer,label){
   /* 不设上限，持续累积 */
   localStorage.setItem("aipm_llm_logs",JSON.stringify(logs));
 }
-const COACH_SYSTEM_PROMPT="你是一位资深的 AI 产品经理教练。你在帮助一位从 HR 背景转型 AI 产品经理的用户学习。回答要求：\n1. 使用清晰的 Markdown 格式排版：用 ### 做段落标题、**加粗**强调关键词、- 做项目符号列表\n2. 结构化、结论先行，用列表组织要点\n3. 结合用户的 HR 背景给出场景化建议\n4. 涉及技术概念时给出 PM 视角的解读\n5. 当用户问项目或实操时，给出具体可执行的步骤\n6. 回答控制在 3-5 个要点，简洁但有用\n7. 必要时可以反问用户，澄清需求后再深入回答";
+/* 人设与背景领域 */
+const PERSONA_OPTIONS=[
+  {v:"market",l:"市场营销",h:"市场领域"},
+  {v:"hr",l:"人力资源",h:"HR 领域"},
+  {v:"finance",l:"金融",h:"金融领域"},
+  {v:"education",l:"教育",h:"教育领域"},
+  {v:"healthcare",l:"医疗",h:"医疗领域"},
+  {v:"ecommerce",l:"电商",h:"电商领域"},
+  {v:"general",l:"通用（无特定背景）",h:"通用领域"}
+];
+function getPersonaOptions(){const cur=getPersona();
+  return PERSONA_OPTIONS.map(o=>`<option value="${o.v}" ${o.v===cur?"selected":""}>${o.l}</option>`).join("");}
+function getPersona(){try{const v=localStorage.getItem("aipm_persona");if(v&&PERSONA_OPTIONS.some(o=>o.v===v))return v;
+  return "market";}catch(e){return "market";}}
+function buildSystemPrompt(){
+  const p=PERSONA_OPTIONS.find(o=>o.v===getPersona());
+  const bg=p?p.h:"市场领域";
+  return "你是一位资深的 AI 产品经理教练。你在帮助一位从"+bg+"转型 AI 产品经理的用户学习。回答要求：\n1. 使用清晰的 Markdown 格式排版：用 ### 做段落标题、**加粗**强调关键词、- 做项目符号列表\n2. 结构化、结论先行，用列表组织要点\n3. 结合用户的"+bg+"背景给出场景化建议\n4. 涉及技术概念时给出 PM 视角的解读\n5. 当用户问项目或实操时，给出具体可执行的步骤\n6. 回答控制在 3-5 个要点，简洁但有用\n7. 必要时可以反问用户，澄清需求后再深入回答";}
 /* 简易 Markdown → HTML 转换 */
 function mdToHtml(s){
   if(!s)return s;
@@ -1619,31 +1678,52 @@ if(/(面试|模拟面试|面我|面试模拟|开始面试)/.test(low)){return st
 if(/(资源|学习资源|课程|教程|推荐.*资源|学什么)/.test(low)||/(推荐.*工具|工具有哪些)/.test(low)){return handleResourceQuery(txt);}
 if(/(项目|实战|实操|动手|练手|练习|项目实战|项目一|项目二|项目三|项目四)/.test(low)){return handleProjectQuery(txt);}
 if(/(你好|嗨|在吗|hi|hello|开始|帮助|怎么用|菜单)/.test(low)){return coachTypingThen(coachIntro(),500);}
-/* 当 LLM 已配置启用时，优先使用大模型回答 */
+/* 当 LLM 已配置启用时，优先使用大模型回答（流式输出） */
 const llmCfg=getLlmConfig();
 if(llmCfg){
   const sc=document.getElementById("chatScroll");
-  if(sc&&!document.getElementById("llmIndicator")){
-    const ind=document.createElement("div");ind.id="llmIndicator";ind.style.cssText="font-size:11px;color:var(--tx3);text-align:center;padding:6px 0";
-    ind.textContent="🤖 AI 教练模式 · 正在调用大模型…";sc.appendChild(ind);}
-  callLLM(txt,COACH_SYSTEM_PROMPT).then(reply=>{
-    const ind=document.getElementById("llmIndicator");if(ind)ind.remove();
-    /* 处理错误：reply 是字符串（以 ⚠️ 开头）或 {content, usage} 对象 */
-    if(typeof reply==="string"&&reply.startsWith("⚠️")){
-      const hit=findKB(txt);
-      if(hit)return pushMsg("coach",kbAnswer(hit)+"<br><div style=\"font-size:11px;color:var(--amber);margin-top:6px\">⚠️ 大模型暂时不可用，错误详情：<br>"+reply+"</div>");
-      return pushMsg("coach",reply+"<br><br>（已切换为内置知识库回答）");}
-    const content=typeof reply==="object"?reply.content:reply;
-    const usage=typeof reply==="object"?reply.usage:null;
-    const activeCfg=getActiveLlmConfig();
-    const modelLabel=activeCfg?activeCfg.label+" · "+activeCfg.model:"未知模型";
-    const usageInfo=usage?`<br><span style="font-size:11px;color:var(--tx3)">📊 输入 ${usage.prompt_tokens||0} · 输出 ${usage.completion_tokens||0} · 共 ${usage.total_tokens||0} tokens</span>`:"";
-    pushMsg("coach",mdToHtml(content||"抱歉，AI 暂时无法回答。")+"<div style=\"font-size:11px;color:var(--tx3);margin-top:8px;padding-top:6px;border-top:1px solid var(--line)\">🤖 "+modelLabel+(usageInfo||"")+"</div>");
-  }).catch(e=>{const ind=document.getElementById("llmIndicator");if(ind)ind.remove();
-    const hit=findKB(txt);
-    const errMsg="⚠️ 大模型调用失败："+((e&&e.message)||"未知错误");
-    if(hit)pushMsg("coach",kbAnswer(hit)+"<br><div style=\"font-size:11px;color:var(--amber);margin-top:6px\">"+errMsg+"</div>");
-    else pushMsg("coach",errMsg);});
+  /* 移除旧指示器（如果有） */
+  const oldInd=document.getElementById("llmIndicator");if(oldInd)oldInd.remove();
+  /* 创建流式消息气泡 */
+  const bubbleId="streamBubble_" + Date.now();
+  const tempDiv=document.createElement("div");tempDiv.className="msg coach";tempDiv.id=bubbleId;
+  tempDiv.innerHTML=`<div class="avatar">教</div><div class="bubble" id="${bubbleId}_content"><span class="typing"><i></i><i></i><i></i></span></div>`;
+  sc.appendChild(tempDiv);sc.scrollTop=sc.scrollHeight;
+  let streamContent="";
+  callLLMStream(txt,buildSystemPrompt(),
+    /* onChunk: 逐块更新气泡内容 */
+    function(full){
+      streamContent=full;
+      const el=document.getElementById(bubbleId+"_content");
+      if(el){el.innerHTML=mdToHtml(full);sc.scrollTop=sc.scrollHeight;}
+    },
+    /* onDone: 完成时添加用量信息 */
+    function(content,err,usage){
+      const el=document.getElementById(bubbleId+"_content");
+      if(err){
+        const hit=findKB(txt);
+        if(hit){
+          if(el)el.innerHTML=kbAnswer(hit)+`<br><div style="font-size:11px;color:var(--amber);margin-top:6px">${err}</div>`;
+        }else{
+          if(el)el.innerHTML=err+`<br><br>（已切换为内置知识库回答）`;
+        }
+        sc.scrollTop=sc.scrollHeight;
+        /* 推送到 chatLog 用于保存 */
+        const finalHtml=el?el.innerHTML:err;
+        chatLog.push({who:"coach",html:finalHtml});
+        if(__currentSessionId)saveCurrentChat();
+        return;
+      }
+      const activeCfg=getActiveLlmConfig();
+      const modelLabel=activeCfg?activeCfg.label+" · "+activeCfg.model:"未知模型";
+      const usageInfo=usage?`<br><span style="font-size:11px;color:var(--tx3)">📊 输入 ${usage.prompt_tokens||0} · 输出 ${usage.completion_tokens||0} · 共 ${usage.total_tokens||0} tokens</span>`:"";
+      const footer=`<div style="font-size:11px;color:var(--tx3);margin-top:8px;padding-top:6px;border-top:1px solid var(--line)">🤖 ${modelLabel}${usageInfo}</div>`;
+      if(el)el.innerHTML=mdToHtml(content||"抱歉，AI 暂时无法回答。")+footer;
+      /* 推送到 chatLog 用于保存 */
+      chatLog.push({who:"coach",html:el?el.innerHTML:(content||"")});
+      if(__currentSessionId)saveCurrentChat();
+      sc.scrollTop=sc.scrollHeight;
+    });
   return;
 }
 /* 未启用 LLM 时走知识库匹配 */
@@ -2518,7 +2598,8 @@ function initApp(){touchStreak();buildNav();go("chat");renderLevel();renderStrea
 const idx=getSessionIndex();const valid=idx.filter(s=>{const msgs=loadSessionMessages(s.id);return msgs.length>1;});
 if(valid.length!==idx.length){saveSessionIndex(valid);idx.forEach(s=>{if(!valid.find(v=>v.id===s.id))localStorage.removeItem("aipm_chat_"+s.id);});}
 const pv=document.getElementById("packDateVal");
-if(pv){const d=latestPackDate();pv.textContent=d?("更新至 "+d):"内置";}
+if(pv){const d=latestPackDate();const cnt=window.__PACKS?window.__PACKS.length:0;
+  pv.textContent=d?`${cnt}包 · ${d}`:`${cnt}包`;}
 document.getElementById("logoutBtn").onclick=doLogout;
 document.getElementById("checkinBtn").onclick=doCheckin;
 document.getElementById("syncBtn").onclick=()=>{
@@ -2559,7 +2640,7 @@ function setSession(user){localStorage.setItem(SESSION_KEY,JSON.stringify({user:
 function authErr(msg){const e=document.getElementById("authErr");if(e){e.textContent=msg;e.classList.add("show");}}
 function renderAuthForm(){
   const g=document.getElementById("authGate");const a=getAuth();
-  const registerMode=!a||(window.__authMode==="register");
+  const registerMode = window.__authMode === "register" || (!a && window.__authMode !== "login");
   const loginMode=!registerMode;
   g.innerHTML=`<div class="auth-card"><div class="auth-logo">PM</div>
     <div style="display:flex;gap:0;margin-bottom:18px;border:1px solid var(--line);border-radius:12px;overflow:hidden">
@@ -2675,6 +2756,9 @@ function openProfile(){
   <div class="profile-field"><label>修改密码（如不改留空）</label><input class="auth-input" id="pfOldP" type="password" placeholder="当前密码"></div>
   <div class="profile-field" style="margin-top:-6px"><input class="auth-input" id="pfNewP" type="password" placeholder="新密码（留空则不修改）" maxlength="32"></div>
   <div class="profile-field"><input class="auth-input" id="pfNewP2" type="password" placeholder="确认新密码" maxlength="32"></div>
+  <hr style="border-color:var(--line);margin:16px 0"><h4 style="margin-bottom:8px">🧑‍💼 人设设置</h4>
+  <div class="profile-field"><label>你的背景领域</label><select class="auth-input" id="pfPersona">${getPersonaOptions()}</select>
+  <div class="profile-hint">AI 教练会根据你的背景领域给出场景化建议，可随时切换</div></div>
   <hr style="border-color:var(--line);margin:16px 0"><h4 style="margin-bottom:8px">🤖 AI 教练配置 · 多 API Key 管理</h4>
   <div class="profile-field" style="margin-bottom:6px"><label>免费模型一键配置</label>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
@@ -2783,6 +2867,9 @@ function openProfile(){
     const newSa=nsa?hashPwd(nu,"sa"+nsa):a.sa;
     const na={user:nu,hash:newHash,email:ne||"",sq:nsq,sa:newSa};
     localStorage.setItem(AUTH_KEY,JSON.stringify(na));
+    /* 保存人设 */
+    const personaEl=document.getElementById("pfPersona");
+    if(personaEl)localStorage.setItem("aipm_persona",personaEl.value);
     if(nu!==a.user||np){localStorage.setItem(SESSION_KEY,JSON.stringify({user:nu,ts:Date.now()}));}
     const uv=document.getElementById("userVal");if(uv)uv.textContent=nu;
     closeModal();toast("✅ 个人信息已保存");};
@@ -2953,6 +3040,72 @@ function toggleKBView(v){
   }else{
     if(g)g.style.display="";if(c){c.style.display="none";if(graphAnim){cancelAnimationFrame(graphAnim);graphAnim=null;}}
     if(t)t.textContent="🕸️ 知识网络";}
+}
+
+/* ---------- 更新速览 ---------- */
+function renderUpdateLog(el){
+  const packs = window.__PACKS || [];
+  if(!packs.length){
+    el.innerHTML=`<div class="page"><div class="u-empty"><span class="big">📭</span>暂无更新记录<br>知识包将在每日自动更新后出现</div></div>`;
+    return;
+  }
+  const sorted = [...packs].sort((a,b)=> (b.meta&&b.meta.date||"").localeCompare(a.meta&&a.meta.date||""));
+  const totalKb = packs.reduce((s,p)=> s + (p.kb||[]).length, 0);
+  const totalQuiz = packs.reduce((s,p)=> s + (p.quiz||[]).length, 0);
+  const totalIv = packs.reduce((s,p)=> s + (p.interview||[]).length, 0);
+  const totalTools = packs.reduce((s,p)=> s + (p.tools||[]).length, 0);
+  let html = `<div class="page"><div class="page-head"><h2>📰 更新速览</h2><p>每日前沿知识包的自动更新日历，一览最新收录的内容</p></div>`;
+  html += `<div class="dash" style="margin-bottom:18px">
+    <div class="dcard"><div class="num">${packs.length}</div><div class="lbl">📦 知识包总数</div></div>
+    <div class="dcard"><div class="num">${totalKb}</div><div class="lbl">📄 知识卡片</div></div>
+    <div class="dcard"><div class="num">${totalQuiz}</div><div class="lbl">✏️ 练习题</div></div>
+    <div class="dcard"><div class="num">${totalIv}</div><div class="lbl">🎤 面试题</div></div>
+    <div class="dcard"><div class="num">${totalTools}</div><div class="lbl">🧰 推荐工具</div></div>
+  </div>`;
+  html += `<div class="update-timeline">`;
+  sorted.forEach((pack,i)=>{
+    const m = pack.meta || {};
+    const date = m.date || "未知日期";
+    const title = m.title || "未命名知识包";
+    const sources = m.source || [];
+    const kb = pack.kb || [];
+    const quiz = pack.quiz || [];
+    const iv = pack.interview || [];
+    const tools = pack.tools || [];
+    const isLatest = i === 0;
+    const cardsHtml = kb.map(k => `<li>${k.title}</li>`).join("");
+    const quizHtml = quiz.map(q => `<li>[${q.type==="multi"?"多选":"单选"}] ${q.q.slice(0,60)}${q.q.length>60?"…":""}</li>`).join("");
+    const ivHtml = iv.map(q => `<li>${q.q.slice(0,60)}${q.q.length>60?"…":""}</li>`).join("");
+    const toolsHtml = tools.map(t => `<li><b>${t.name}</b>（${t.category}）— ${t.summary}</li>`).join("");
+    const sourceHtml = sources.length ? `<div class="u-source"><b>信息来源：</b>${sources.join(" · ")}</div>` : "";
+    html += `<div class="update-entry${isLatest?" latest":""}" onclick="this.querySelector('.u-detail').classList.toggle('show')">
+      <div class="u-date">${isLatest?"🆕 ":""}${date}</div>
+      <div class="u-tags">${isLatest?`<span class="u-tag latest-tag">最新</span>`:""}
+        ${kb.length?`<span class="u-tag">📄 ${kb.length} 张卡片</span>`:""}
+        ${quiz.length?`<span class="u-tag">✏️ ${quiz.length} 道题</span>`:""}
+        ${iv.length?`<span class="u-tag">🎤 ${iv.length} 道面试</span>`:""}
+        ${tools.length?`<span class="u-tag">🧰 ${tools.length} 个工具</span>`:""}
+      </div>
+      <h3>${title}</h3>
+      <div class="u-summary">${kb.length?kb[0].title:""}${kb.length>1?` 等 ${kb.length} 个主题`:""}</div>
+      <div class="u-meta">
+        ${kb.length?`<span>📄 <b>${kb.length}</b> 张知识卡</span>`:""}
+        ${quiz.length?`<span>✏️ <b>${quiz.length}</b> 道练习题</span>`:""}
+        ${iv.length?`<span>🎤 <b>${iv.length}</b> 道面试题</span>`:""}
+        ${tools.length?`<span>🧰 <b>${tools.length}</b> 个工具推荐</span>`:""}
+        <span style="margin-left:auto;color:var(--indigo2)">👆 点击展开详情</span>
+      </div>
+      <div class="u-detail">
+        ${cardsHtml?`<h4>📄 知识卡片</h4><ul>${cardsHtml}</ul>`:""}
+        ${quizHtml?`<h4>✏️ 练习题</h4><ul>${quizHtml}</ul>`:""}
+        ${ivHtml?`<h4>🎤 面试题</h4><ul>${ivHtml}</ul>`:""}
+        ${toolsHtml?`<h4>🧰 推荐工具</h4><ul>${toolsHtml}</ul>`:""}
+        ${sourceHtml}
+      </div>
+    </div>`;
+  });
+  html += `</div></div>`;
+  el.innerHTML = html;
 }
 
 /* ---------- 管理员后台 ---------- */
