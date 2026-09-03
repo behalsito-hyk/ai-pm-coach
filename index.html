@@ -375,6 +375,37 @@ input,textarea,select{font-family:inherit}
 .pf-empty{text-align:center;padding:60px 20px;color:var(--tx3);font-size:14px;line-height:2}
 .pf-empty .big{font-size:48px;display:block;margin-bottom:10px}
 .pf-type-badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;margin-bottom:8px}
+
+/* ===== 学习路径规划 ===== */
+.lp-dash{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:22px}
+.lp-dcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;text-align:center}
+.lp-dcard .num{font-size:28px;font-weight:800;background:linear-gradient(120deg,#a5b4fc,#c084fc);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lp-dcard .lbl{font-size:12px;color:var(--tx3);margin-top:3px}
+.lp-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:13px;margin-bottom:10px;transition:.15s}
+.lp-row:hover{border-color:var(--line2)}
+.lp-row .lp-icon{font-size:22px;width:36px;text-align:center}
+.lp-row .lp-info{flex:1;min-width:0}
+.lp-row .lp-info .lp-name{font-size:14px;font-weight:700}
+.lp-row .lp-info .lp-stat{font-size:11.5px;color:var(--tx3);margin-top:2px}
+.lp-row .lp-bar{width:120px;height:8px;background:#0d1320;border-radius:99px;overflow:hidden;flex-shrink:0}
+.lp-row .lp-bar i{display:block;height:100%;border-radius:99px;transition:width .4s}
+.lp-row .lp-pct{font-size:14px;font-weight:700;width:40px;text-align:right;flex-shrink:0}
+.lp-section{margin-bottom:24px}
+.lp-section h3{font-size:16px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.lp-section .lp-sub{font-size:12.5px;color:var(--tx3);margin-bottom:10px;line-height:1.6}
+.lp-rec{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:12px}
+.lp-rec .lp-rec-icon{font-size:20px;flex-shrink:0;width:32px;text-align:center}
+.lp-rec .lp-rec-body{flex:1}
+.lp-rec .lp-rec-body .lp-rec-title{font-size:14px;font-weight:700;color:var(--tx);margin-bottom:3px}
+.lp-rec .lp-rec-body .lp-rec-desc{font-size:12.5px;color:var(--tx2);line-height:1.6}
+.lp-rec .lp-rec-action{flex-shrink:0;margin-left:auto}
+.lp-rec .lp-rec-action button{font-size:12px;padding:6px 14px;border-radius:9px;font-weight:600;white-space:nowrap}
+.lp-seq{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.lp-seq-item{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:99px;padding:8px 14px;font-size:13px;font-weight:600;transition:.15s}
+.lp-seq-item .lp-seq-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;color:#fff}
+.lp-seq-item.done{opacity:.6;border-color:var(--green)}
+.lp-seq-item.done .lp-seq-num{background:var(--green)!important}
+.lp-seq-item.active{border-color:var(--indigo);box-shadow:0 0 0 2px rgba(99,102,241,.25)}
 </style>
 </head>
 <body>
@@ -1333,7 +1364,8 @@ const VIEWS=[
 {id:"cost",ico:"💰",name:"费用明细",desc:"AI 教练调用花费与 Token 明细，可设置预算"},
 {id:"me",ico:"📊",name:"成长档案",desc:"积分、连续天数、各领域掌握度一目了然"},
 {id:"admin",ico:"⚙️",name:"管理后台",desc:"用户管理、登录日志、系统设置"},
-{id:"portfolio",ico:"📁",name:"作品集工坊",desc:"ToB 市场方向作品集，STAR 模板引导 + AI 评分 + 一键导出"}
+{id:"portfolio",ico:"📁",name:"作品集工坊",desc:"ToB 市场方向作品集，STAR 模板引导 + AI 评分 + 一键导出"},
+{id:"path",ico:"🧭",name:"学习路径",desc:"诊断薄弱领域，智能推荐学习顺序，规划每日学习计划"}
 ];
 let VIEW="chat";
 function buildNav(){const nav=document.getElementById("nav");nav.innerHTML="";
@@ -1348,7 +1380,7 @@ render();}
 /* ---------- 渲染分发 ---------- */
 function render(){const el=document.getElementById("view");el.innerHTML="";
 if(VIEW==="chat")renderChat(el);else if(VIEW==="kb")renderKB(el);else if(VIEW==="tools")renderTools(el);
-else if(VIEW==="quiz")renderQuiz(el);else if(VIEW==="iv")renderIV(el);else if(VIEW==="portfolio")renderPortfolio(el);else if(VIEW==="updates")renderUpdateLog(el);else if(VIEW==="cost")renderCost(el);else if(VIEW==="admin")renderAdmin(el);else{renderMe(el);const calEl=document.getElementById("checkinCalendar");if(calEl)renderCheckinCalendar(calEl);}}
+else if(VIEW==="quiz")renderQuiz(el);else if(VIEW==="iv")renderIV(el);else if(VIEW==="path")renderPath(el);else if(VIEW==="portfolio")renderPortfolio(el);else if(VIEW==="updates")renderUpdateLog(el);else if(VIEW==="cost")renderCost(el);else if(VIEW==="admin")renderAdmin(el);else{renderMe(el);const calEl=document.getElementById("checkinCalendar");if(calEl)renderCheckinCalendar(calEl);}}
 
 /* ============================================================
  * 模块一：教练陪练对话
@@ -3482,6 +3514,137 @@ function pfView(el,id){
       setTimeout(()=>document.getElementById("pfViewToast").style.display="none",2000);
     });
   };
+}
+
+/* ---------- 学习路径规划 ---------- */
+const PATH_SEQ = [
+  {id:"base",label:"大模型基础",color:"#6366f1"},
+  {id:"product",label:"AI产品设计",color:"#10b981"},
+  {id:"trend",label:"前沿趋势",color:"#06b6d4"},
+  {id:"interview",label:"面试实战",color:"#f59e0b"},
+  {id:"hr",label:"AI+HR",color:"#ec4899"}
+];
+const PATH_KEY = "aipm_path";
+function pathLoad(){try{return JSON.parse(localStorage.getItem(PATH_KEY))||{} }catch(e){return {};}}
+function pathSave(d){localStorage.setItem(PATH_KEY,JSON.stringify(d));}
+function pathCompleted(seqId){const d=pathLoad();return d[seqId]||0;} /* 0=未开始, 1=进行中, 2=已完成 */
+
+function renderPath(el){
+  const kbCounts={};const kbReadCounts={};
+  const activeKB=getActiveKB();
+  activeKB.forEach(k=>{const d=k.domain||"base";kbCounts[d]=(kbCounts[d]||0)+1;if(S.kbRead[k.id])kbReadCounts[d]=(kbReadCounts[d]||0)+1;});
+
+  /* 计算各领域掌握度 */
+  const domains=PATH_SEQ.map(seq=>{
+    const d=seq.id;const s=S.byDomain[d]||{r:0,t:0};
+    const acc=s.t?Math.round(s.r/s.t*100):0;
+    const total=kbCounts[d]||0;const read=kbReadCounts[d]||0;
+    const kbPct=total?Math.round(read/total*100):0;
+    const mastery=Math.round((acc*0.6)+(kbPct*0.4));
+    return {...seq,acc,read,total,kbPct,mastery};
+  });
+
+  /* 排序：按掌握度从低到高（最薄弱的前面） */
+  const sorted=[...domains].sort((a,b)=>a.mastery-b.mastery);
+  const weakest=sorted[0];
+  const overall=Math.round(domains.reduce((s,d)=>s+d.mastery,0)/domains.length);
+
+  /* 生成推荐行动 */
+  const recs=[];
+  sorted.forEach(d=>{
+    if(d.mastery<40&&d.acc<50)recs.push({icon:"📝",title:`去刷 ${d.label} 的题`,desc:`正确率仅 ${d.acc}%，需要加强基础概念理解`,action:"quiz",domain:d.id,label:"刷题→"});
+    if(d.kbPct<60)recs.push({icon:"📖",title:`阅读 ${d.label} 知识卡片`,desc:`已读 ${d.read}/${d.total} 篇，还有 ${d.total-d.read} 篇未读`,action:"kb",domain:d.id,label:"阅读→"});
+  });
+  /* 最多展示 4 条，去重 */
+  const seen=new Set();const finalRecs=recs.filter(r=>{const k=r.action+r.domain;if(seen.has(k))return false;seen.add(k);return true;}).slice(0,4);
+
+  /* 学习序列 */
+  const seqHtml=PATH_SEQ.map((s,i)=>{
+    const st=pathCompleted(s.id);
+    const cls=st===2?"done":st===1?"active":"";
+    const nm=s.label;
+    return `<div class="lp-seq-item ${cls}"><div class="lp-seq-num" style="background:${s.color}">${i+1}</div>${nm}</div>`;
+  }).join("");
+
+  el.innerHTML=`<div class="page">
+    <div class="page-head"><h2>🧭 学习路径规划</h2>
+    <p>诊断薄弱领域 → 智能推荐学习顺序 → 追踪每日进步</p></div>
+
+    <div class="lp-dash">
+      <div class="lp-dcard"><div class="num">${overall}%</div><div class="lbl">综合掌握度</div></div>
+      <div class="lp-dcard"><div class="num">${S.quiz.total||0}</div><div class="lbl">累计刷题</div></div>
+      <div class="lp-dcard"><div class="num">${Object.keys(S.kbRead).length}</div><div class="lbl">已读卡片</div></div>
+      <div class="lp-dcard"><div class="num">${S.streak||0}</div><div class="lbl">连续学习(天)</div></div>
+    </div>
+
+    <div class="lp-section">
+      <h3>📊 各领域掌握度</h3>
+      <div class="lp-sub">依据答题正确率(60%) + 知识卡片阅读率(40%) 综合评估</div>
+      ${sorted.map(d=>{
+        const color=d.mastery>=70?"var(--green2)":d.mastery>=40?"var(--amber)":"var(--red)";
+        return `<div class="lp-row">
+          <div class="lp-icon">${DOMAINS[d.id]?.icon||"📚"}</div>
+          <div class="lp-info"><div class="lp-name" style="color:${DOMAINS[d.id]?.color||"var(--tx)"}">${d.label}</div>
+            <div class="lp-stat">正确率 ${d.acc}% · 卡片 ${d.read}/${d.total}</div></div>
+          <div class="lp-bar"><i style="width:${d.mastery}%;background:${color}"></i></div>
+          <div class="lp-pct" style="color:${color}">${d.mastery}%</div>
+        </div>`;
+      }).join("")}
+    </div>
+
+    ${finalRecs.length?`<div class="lp-section"><h3>💡 推荐行动</h3>
+      <div class="lp-sub">基于你的薄弱点，建议优先做以下学习任务</div>
+      ${finalRecs.map(r=>`<div class="lp-rec">
+        <div class="lp-rec-icon">${r.icon}</div>
+        <div class="lp-rec-body"><div class="lp-rec-title">${r.title}</div>
+          <div class="lp-rec-desc">${r.desc}</div></div>
+        <div class="lp-rec-action"><button class="btn btn-primary" data-rec="${r.action}" data-domain="${r.domain}" style="font-size:12px;padding:7px 14px">${r.label}</button></div>
+      </div>`).join("")}</div>`:`
+      <div class="lp-section"><div class="lp-rec" style="border-color:var(--green)">
+        <div class="lp-rec-icon">🎉</div>
+        <div class="lp-rec-body"><div class="lp-rec-title">当前状态不错！</div>
+          <div class="lp-rec-desc">各领域掌握度良好，建议保持每日学习节奏，多刷面试题巩固</div></div>
+      </div></div>`}
+
+    <div class="lp-section">
+      <h3>🗺️ 推荐学习顺序</h3>
+      <div class="lp-sub">从基础到专业，循序渐进。完成一个领域后再进入下一个</div>
+      <div class="lp-seq">${seqHtml}</div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        ${PATH_SEQ.map((s,i)=>{
+          const st=pathCompleted(s.id);
+          const label=st===2?"✅ 已完成":st===1?"⏳ 进行中":"⭕ 未开始";
+          return `<button class="chip" data-seq="${s.id}" style="border-color:${s.color};color:${s.color}">${i+1}. ${s.label} · ${label}</button>`;
+        }).join("")}
+      </div>
+    </div>
+
+    <div class="lp-section" style="margin-top:20px;padding:16px;background:var(--card);border:1px solid var(--line);border-radius:14px">
+      <h3 style="margin-bottom:8px">📋 快速跳转</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="fbtn" id="lpGoChat">💬 教练陪练</button>
+        <button class="fbtn" id="lpGoKB">📚 知识库</button>
+        <button class="fbtn" id="lpGoQuiz">🎯 刷题训练</button>
+        <button class="fbtn" id="lpGoIV">🎤 面试模拟</button>
+      </div>
+    </div>
+  </div>`;
+
+  /* 绑定事件 */
+  el.querySelectorAll("[data-rec]").forEach(b=>b.onclick=function(){
+    const action=this.dataset.rec;const domain=this.dataset.domain;
+    if(action==="quiz"){go("quiz");/* 设置过滤 */if(window.quizFilter!==undefined)quizFilter=domain;if(window.render)render();}
+    else if(action==="kb"){go("kb");}
+  });
+  el.querySelectorAll("[data-seq]").forEach(b=>b.onclick=function(){
+    const id=this.dataset.seq;const cur=pathCompleted(id);const next=cur>=2?0:cur+1;
+    const labels=["⭕ 未开始","⏳ 进行中","✅ 已完成"];const d=pathLoad();d[id]=next;pathSave(d);renderPath(el);
+    toast("已标记为「"+labels[next]+"」");
+  });
+  document.getElementById("lpGoChat").onclick=()=>go("chat");
+  document.getElementById("lpGoKB").onclick=()=>go("kb");
+  document.getElementById("lpGoQuiz").onclick=()=>go("quiz");
+  document.getElementById("lpGoIV").onclick=()=>go("iv");
 }
 
 /* ---------- 启动：装载知识包 → 鉴权门禁 → 进入系统 ---------- */
