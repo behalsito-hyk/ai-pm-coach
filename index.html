@@ -406,6 +406,27 @@ input,textarea,select{font-family:inherit}
 .lp-seq-item.done{opacity:.6;border-color:var(--green)}
 .lp-seq-item.done .lp-seq-num{background:var(--green)!important}
 .lp-seq-item.active{border-color:var(--indigo);box-shadow:0 0 0 2px rgba(99,102,241,.25)}
+
+/* ===== ToB 企业级 AI 专题 ===== */
+.tob-hero{background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08));border:1px solid rgba(129,140,248,.3);border-radius:18px;padding:22px 24px;margin-bottom:22px;display:flex;align-items:flex-start;gap:16px}
+.tob-hero .tob-hero-icon{font-size:36px;flex-shrink:0}
+.tob-hero h3{font-size:17px;font-weight:800;margin-bottom:4px}
+.tob-hero p{font-size:13px;color:var(--tx2);line-height:1.7}
+.tob-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px;transition:.2s}
+.tob-card:hover{border-color:var(--line2)}
+.tob-card .tob-tag{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;margin-bottom:8px;letter-spacing:.3px}
+.tob-card h4{font-size:15px;margin-bottom:6px;line-height:1.5}
+.tob-card .tob-body{font-size:13px;color:var(--tx2);line-height:1.7}
+.tob-card .tob-body ul{margin:6px 0 8px 2px;padding-left:18px}
+.tob-card .tob-body li{margin:4px 0}
+.tob-card .tob-body .hl{color:var(--amber);font-weight:600}
+.tob-card .tob-body .good{color:var(--green2);font-weight:600}
+.tob-card .tob-foot{font-size:11.5px;color:var(--tx3);margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:center}
+.tob-card .tob-foot button{font-size:11.5px;padding:4px 10px;border-radius:7px;border:1px solid var(--line);background:var(--card2);color:var(--tx2);cursor:pointer;transition:.12s}
+.tob-card .tob-foot button:hover{color:var(--tx);border-color:var(--tx3)}
+.tob-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:800px){.tob-col{grid-template-columns:1fr}}
+.tob-quote{background:rgba(245,158,11,.07);border-left:3px solid var(--amber);padding:12px 16px;border-radius:0 11px 11px 0;margin:12px 0;font-size:13px;color:#fde8c4;line-height:1.7}
+.tob-quote b{color:var(--amber)}
 </style>
 </head>
 <body>
@@ -1365,7 +1386,8 @@ const VIEWS=[
 {id:"me",ico:"📊",name:"成长档案",desc:"积分、连续天数、各领域掌握度一目了然"},
 {id:"admin",ico:"⚙️",name:"管理后台",desc:"用户管理、登录日志、系统设置"},
 {id:"portfolio",ico:"📁",name:"作品集工坊",desc:"ToB 市场方向作品集，STAR 模板引导 + AI 评分 + 一键导出"},
-{id:"path",ico:"🧭",name:"学习路径",desc:"诊断薄弱领域，智能推荐学习顺序，规划每日学习计划"}
+{id:"path",ico:"🧭",name:"学习路径",desc:"诊断薄弱领域，智能推荐学习顺序，规划每日学习计划"},
+{id:"tob",ico:"🏢",name:"ToB专题",desc:"企业级 AI 产品设计原则、案例库、面试题、学习资源"}
 ];
 let VIEW="chat";
 function buildNav(){const nav=document.getElementById("nav");nav.innerHTML="";
@@ -1380,7 +1402,7 @@ render();}
 /* ---------- 渲染分发 ---------- */
 function render(){const el=document.getElementById("view");el.innerHTML="";
 if(VIEW==="chat")renderChat(el);else if(VIEW==="kb")renderKB(el);else if(VIEW==="tools")renderTools(el);
-else if(VIEW==="quiz")renderQuiz(el);else if(VIEW==="iv")renderIV(el);else if(VIEW==="path")renderPath(el);else if(VIEW==="portfolio")renderPortfolio(el);else if(VIEW==="updates")renderUpdateLog(el);else if(VIEW==="cost")renderCost(el);else if(VIEW==="admin")renderAdmin(el);else{renderMe(el);const calEl=document.getElementById("checkinCalendar");if(calEl)renderCheckinCalendar(calEl);}}
+else if(VIEW==="quiz")renderQuiz(el);else if(VIEW==="iv")renderIV(el);else if(VIEW==="path")renderPath(el);else if(VIEW==="tob")renderToB(el);else if(VIEW==="portfolio")renderPortfolio(el);else if(VIEW==="updates")renderUpdateLog(el);else if(VIEW==="cost")renderCost(el);else if(VIEW==="admin")renderAdmin(el);else{renderMe(el);const calEl=document.getElementById("checkinCalendar");if(calEl)renderCheckinCalendar(calEl);}}
 
 /* ============================================================
  * 模块一：教练陪练对话
@@ -3645,6 +3667,120 @@ function renderPath(el){
   document.getElementById("lpGoKB").onclick=()=>go("kb");
   document.getElementById("lpGoQuiz").onclick=()=>go("quiz");
   document.getElementById("lpGoIV").onclick=()=>go("iv");
+}
+
+/* ---------- ToB 企业级 AI 专题 ---------- */
+const TOB_PRINCIPLES = [
+  {tag:"权限设计",tagColor:"var(--indigo2)",tagBg:"rgba(99,102,241,.15)",title:"权限与安全是入场券",body:"ToB AI 产品第一关不是体验，是安全。企业采购 AI 产品时，<span class='hl'>数据主权、租户隔离、审计日志</span>是必选项，不是加分项。设计原则：最小权限（Agent 只读授权目录）、风险分级（只读/写入/发送分开治理）、操作留痕（谁在什么时候让 AI 做了什么）。<br><br>💡 面试常考：『你怎么设计企业 AI 产品的权限体系？』参考 WorkBuddy MCP 底座的权限隔离方案。"},
+  {tag:"部署策略",tagColor:"var(--green2)",tagBg:"rgba(16,185,129,.15)",title:"私有化部署 vs SaaS 的取舍",body:"企业客户对数据上云的态度截然不同：金融/医疗/政府要求<span class='hl'>私有化部署</span>，中小企业接受 SaaS。产品策略上要考虑：<br>• <span class='good'>本地优先</span>：核心数据在本地处理，云端只做非敏感推理<br>• <span class='good'>混合架构</span>：标准版 SaaS + 企业版私有化，用同一套代码基<br>• <span class='good'>部署成本</span>：私有化部署的运维成本是 SaaS 的 3-5 倍，定价要覆盖<br><br>💡 参考：中国电信 TeleAgent 信创版支持银河麒麟/统信UOS，覆盖国产芯片。"},
+  {tag:"集成生态",tagColor:"var(--amber)",tagBg:"rgba(245,158,11,.15)",title:"不是取代系统，是融入流程",body:"企业已经有一套成熟IT系统（OA/CRM/ERP），AI 产品不能要求企业推倒重来。设计原则：<br>• <span class='good'>连接器优先</span>：提供 MCP/Skill/API 三种接入方式，适配不同技术栈<br>• <span class='good'>渐进式替代</span>：先在边缘场景（知识问答/报表生成）落地，再深入核心流程<br>• <span class='good'>SSO 打通</span>：支持企业统一身份认证（LDAP/OAuth），不让用户多记一套账号<br><br>💡 千问办公连接器已打通钉钉/飞书/企业微信三大平台——这是 ToB 产品的基本功。"},
+  {tag:"成本模型",tagColor:"var(--pink)",tagBg:"rgba(236,72,153,.15)",title:"ToB 的 AI 定价：从按人头到按用量",body:"ToB AI 产品的定价正在经历变革：<br>• <span class='good'>传统模式</span>：按席位收费（WorkBuddy 99-999元/月，千问办公 98元/月）<br>• <span class='good'>新模式</span>：按任务/用量计费（Token 消耗指数已跌至 97美分历史新低）<br>• <span class='good'>策略组合</span>：基础月费覆盖固定成本 + 用量计费覆盖推理成本<br><br>核心公式：<span class='hl'>每用户月成本 = 平均每次调用 Token × 单价 × 月调用次数</span><br>模型路由（标准/高级双模式）可降低 75% Token 消耗，是成本优化的关键杠杆。"},
+  {tag:"组织变革",tagColor:"var(--cyan)",tagBg:"rgba(6,182,212,.15)",title:"从工具到数字员工的角色转变",body:"ToB AI 产品的终极形态不是工具，是<span class='hl'>数字员工</span>。这意味着：<br>• <span class='good'>可管理</span>：企业需要能看到 AI 在做什么、花了多少钱、效果如何<br>• <span class='good'>可培训</span>：AI 能学习企业特有的业务规则和术语<br>• <span class='good'>可问责</span>：AI 出错时有清晰的追责链路和回滚机制<br><br>典型案例：晶科能源用 AI Agent 将财务月度预算分析从<span class='hl'>2 天缩短至 15 分钟</span>；蒙牛一线员工自主开发了 45 个 AI 数字员工。这不是 PoC，是真实生产环境。"}
+];
+const TOB_CASES = [
+  {id:"tob-case-1",tag:"企业内部",tagColor:"var(--indigo2)",tagBg:"rgba(99,102,241,.15)",title:"晶科能源：AI 财务预算分析从 2 天到 15 分钟",body:"晶科能源部署了 AI 办公智能体，财务人员月度预算分析用时从 2 天缩短至 15 分钟。Agent 自动读取财务系统的数据、按照历史模板生成预算分析报告、标注异常波动并给出原因分析。<br><br><span class='hl'>PM 启示：</span>AI 在财务场景的成功不是因为模型多强，而是因为「数据流程标准化 + 人工审核节点保留」——产品设计的关键是找到那些流程标准、重复度高、容错可控的场景。"},
+  {id:"tob-case-2",tag:"制造业",tagColor:"var(--green2)",tagBg:"rgba(16,185,129,.15)",title:"蒙牛：45 个 AI 数字员工覆盖全业务线",body:"蒙牛的一线员工自主开发了 45 个 AI 数字员工，覆盖研发、供应链、销售等多个业务域。这不是 IT 部门主导的项目，而是业务部门自发采用低代码/Agent 平台创建的。<br><br><span class='hl'>PM 启示：</span>ToB AI 产品的「二次开发能力」比「开箱即用」更重要。如果业务人员能用你的产品自己搭 AI 应用，采用率会指数级上升——参考 WorkBuddy 的 Skill 机制和 Coze 的 Bot 创建。"},
+  {id:"tob-case-3",tag:"汽车",tagColor:"var(--amber)",tagBg:"rgba(245,158,11,.15)",title:"长安汽车：千问办公落地研发与质量管控",body:"长安汽车研发、生产制造、质量管理、采购多个业务场景应用千问办公。电气系统集成测试部门借助千问办公跑通工作流后，原本需要 1-2 周的系统化用户反馈分析，只需要 <span class='hl'>1 小时</span> 左右即可完成。<br><br><span class='hl'>PM 启示：</span>长安案例展示了 ToB AI 产品的「产业深耕」路线——不追求通用能力，而是深耕垂直行业的特定工作流。千问办公副总裁明确说『我们不是在做另一个 WorkBuddy』，差异化定位在产业深度。"},
+  {id:"tob-case-4",tag:"安全",tagColor:"var(--pink)",tagBg:"rgba(236,72,153,.15)",title:"360 纳米Work：以安全能力形成差异化",body:"360 创始人周鸿祎指出：『大模型像顾问，说错可以不听；智能体像员工，会读文件、装软件、改数据，一旦出错就是真实动作。因此纳米Work坚持原生安全，出厂内置，把安全像刹车气囊一样从出厂就做进产品。』<br><br><span class='hl'>PM 启示：</span>当所有竞品都在拼功能时，安全就是最硬的差异化壁垒。尤其对于金融、政务、医疗等强合规行业，安全能力甚至比功能数量更重要——这是 ToB PM 的独特视角。"}
+];
+const TOB_QUESTIONS = [
+  {q:"你负责的 AI 产品要卖给一家金融企业客户，CIO 最关心数据安全。你会怎么设计产品方案来打消他的顾虑？",hints:["提到私有化部署或混合架构选项","强调数据不出域/最小权限/操作审计","准备标准的安全白皮书和合规资质","设计 PoC 阶段的安全验证方案","不要只说『我们的模型很安全』，要给出可验证的机制"]},
+  {q:"你们的 AI SaaS 产品刚上线，一家大型企业想采购但要求私有化部署。作为 PM，你会如何评估这个需求并制定方案？",hints:["评估私有化的运维成本（通常是 SaaS 的 3-5 倍）","判断是否是战略客户（品牌效应/行业标杆/后续扩展）","设计渐进方案：先混合部署（核心本地+云端推理）再逐步过渡","评估对产品迭代的影响（私有化版本会滞后 SaaS 几个版本）","定价策略：私有化部署费 + 年度维护费 + 按用量计费"]},
+  {q:"你发现企业的业务部门在用你的 AI 产品做 PoC 测试，但 IT 部门迟迟不批准采购。你怎么推动？",hints:["先找到业务部门的『痛苦指数』最高的场景做突破","帮业务部门量化 ROI（节省多少时间/成本）","让 IT 部门参与 PoC 评估，解决他们的安全顾虑","提供标准化的安全合规文档和案例参考","考虑做『部门级采购』试点，先让一个部门用起来再推广"]}
+];
+
+function renderToB(el){
+  const quizPool=QUIZ.filter(q=>q.domain==="product"||q.domain==="trend");
+  const toQuiz=quizPool.sort(()=>Math.random()-.5).slice(0,1);
+
+  el.innerHTML=`<div class="page">
+    <div class="page-head"><h2>🏢 ToB 企业级 AI 专题</h2>
+    <p>面向 ToB 企业市场的 AI 产品经理专属内容：设计原则、真实案例、面试题库</p></div>
+
+    <div class="tob-hero">
+      <div class="tob-hero-icon">🎯</div>
+      <div><h3>为什么 ToB AI 产品经理要懂这些？</h3>
+      <p>消费级 AI 产品看 DAU 和留存，企业级 AI 产品看 <b>ROI 和安全合规</b>。你的客户不是个体用户，是 CIO、CTO、采购部门——他们的决策逻辑完全不同。2026 年 AI 办公市场已进入三足鼎立（WorkBuddy / 豆包工作 / 千问办公），所有大厂都在抢企业客户，这是 AI PM 最大的就业市场。</p></div>
+    </div>
+
+    <div class="tob-section"><h3>📐 企业级 AI 产品五大设计原则</h3>
+      <div style="display:grid;gap:14px">${TOB_PRINCIPLES.map(p=>`<div class="tob-card">
+        <span class="tob-tag" style="color:${p.tagColor};background:${p.tagBg}">${p.tag}</span>
+        <h4>${p.title}</h4>
+        <div class="tob-body">${p.body}</div>
+      </div>`).join("")}</div>
+    </div>
+
+    <div class="tob-section" style="margin-top:24px"><h3>📋 真实企业案例库</h3>
+      <div class="tob-col">${TOB_CASES.map(c=>`<div class="tob-card">
+        <span class="tob-tag" style="color:${c.tagColor};background:${c.tagBg}">${c.tag}</span>
+        <h4>${c.title}</h4>
+        <div class="tob-body">${c.body}</div>
+        <div class="tob-foot">
+          <span>${c.tag} · 2026</span>
+          <button data-case="${c.id}">📋 复制摘要</button>
+        </div>
+      </div>`).join("")}</div>
+    </div>
+
+    <div class="tob-section" style="margin-top:24px"><h3>🎤 ToB 场景面试题</h3>
+      ${TOB_QUESTIONS.map((q,i)=>`<div class="tob-card" style="cursor:pointer" data-tq="${i}">
+        <span class="tob-tag" style="color:var(--amber);background:rgba(245,158,11,.15)">ToB 必问</span>
+        <h4>${q.q}</h4>
+        <div class="tob-body" id="tqAns${i}" style="display:none">
+          <div class="tob-quote"><b>💡 答题思路</b></div>
+          <ul>${q.hints.map(h=>`<li>${h}</li>`).join("")}</ul>
+        </div>
+        <div class="tob-foot">
+          <span>点击展开思路</span>
+          <button class="tq-toggle" data-tq="${i}">👁️ 查看思路</button>
+        </div>
+      </div>`).join("")}
+    </div>
+
+    <div class="tob-section" style="margin-top:24px"><h3>📚 推荐学习资源</h3>
+      <div style="display:grid;gap:12px">
+        <div class="tob-card"><h4>📖 《启示录：打造用户喜爱的产品》</h4>
+          <div class="tob-body">产品经理经典读物中，ToB 部分最有价值的是「企业级产品的销售周期」「客户开发方法」和「以客户为中心的交付流程」。</div>
+          <div class="tob-foot"><span style="color:var(--tx2)">推荐阅读章节：第 4 部分「企业级产品」</span></div></div>
+        <div class="tob-card"><h4>📖 《SaaS 创业路线图》</h4>
+          <div class="tob-body">SaaS 产品定价、客户成功、续费管理——ToB AI 产品的商业模式基本盘。AI 时代虽然技术变了，但 ToB 的商业逻辑没变。</div>
+          <div class="tob-foot"><span style="color:var(--tx2)">重点：定价策略、客户成功、 NRR 计算</span></div></div>
+        <div class="tob-card"><h4>📰 前沿知识包（已内置）</h4>
+          <div class="tob-body">WorkBuddy 开放平台深度解读（pack-005）、办公 Agent 三国杀分析（pack-001）、Fable 5.1 Agent 经济学（pack-004）等已收录在「更新速览」模块，每日自动更新。</div>
+          <div class="tob-foot"><button onclick="go('updates')">📰 查看更新速览</button></div></div>
+      </div>
+    </div>
+
+    <div class="tob-section" style="margin-top:24px;padding:16px;background:var(--card);border:1px solid var(--line);border-radius:14px">
+      <h3 style="margin-bottom:10px">🔗 关联模块快速跳转</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="fbtn" onclick="go('quiz')">🎯 刷题（ToB 相关题）」</button>
+        <button class="fbtn" onclick="go('kb')">📚 知识库</button>
+        <button class="fbtn" onclick="go('portfolio')">📁 作品集工坊</button>
+        <button class="fbtn" onclick="go('path')">🧭 学习路径</button>
+        <button class="fbtn" onclick="go('iv')">🎤 面试模拟</button>
+      </div>
+    </div>
+  </div>`;
+
+  /* 面试题点击展开 */
+  el.querySelectorAll(".tq-toggle").forEach(b=>b.onclick=function(e){
+    e.stopPropagation();const i=this.dataset.tq;
+    const ans=document.getElementById("tqAns"+i);const isHidden=ans.style.display==="none";
+    ans.style.display=isHidden?"block":"none";this.textContent=isHidden?"🙈 收起思路":"👁️ 查看思路";
+  });
+  el.querySelectorAll("[data-tq]").forEach(card=>card.onclick=function(){
+    const i=this.dataset.tq;const btn=this.querySelector(".tq-toggle");
+    const ans=document.getElementById("tqAns"+i);const isHidden=ans.style.display==="none";
+    ans.style.display=isHidden?"block":"none";if(btn)btn.textContent=isHidden?"🙈 收起思路":"👁️ 查看思路";
+  });
+  /* 案例复制 */
+  el.querySelectorAll("[data-case]").forEach(b=>b.onclick=function(){
+    const id=this.dataset.case;const c=TOB_CASES.find(x=>x.id===id);
+    if(!c)return;const text=c.title+"\n"+c.body.replace(/<br>/g,"\n").replace(/<[^>]*>/g,"");
+    navigator.clipboard.writeText(text).then(()=>{toast("✅ 已复制案例摘要");}).catch(()=>{toast("❌ 复制失败");});
+  });
 }
 
 /* ---------- 启动：装载知识包 → 鉴权门禁 → 进入系统 ---------- */
