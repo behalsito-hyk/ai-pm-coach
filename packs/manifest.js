@@ -8,5 +8,7 @@ window.PACK_MANIFEST = [
   "pack-002-mcp-roadmap-2026-08.js",
   "pack-003-openclaw-2.0-2026-09.js",
   "pack-004-fable5.1-agent-economics-2026-09.js",
-  "pack-005-workbuddy-open-platform-2026-09.js"
+  "pack-005-workbuddy-open-platform-2026-09.js",
+  "pack-006-wanyou-harness-2026-09.js",
+  "pack-007-ai-office-entry-war-2026-09.js"
 ];
